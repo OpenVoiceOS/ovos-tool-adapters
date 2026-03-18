@@ -4,16 +4,35 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ovos-tool-adapters"
-version = "0.1.0a1"
+dynamic = ["version"]
 description = "MCP and UTCP ToolBox plugins for the OVOS agentic loop"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
-authors = [{ name = "OpenVoiceOS" }]
+authors = [{ name = "OpenVoiceOS", email = "jarbasai@mailfence.com" }]
+keywords = ["ovos", "mycroft", "mcp", "utcp", "agent", "toolbox", "plugin"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+
 dependencies = [
     "ovos-plugin-manager>=0.7.0",
     "pydantic>=2.0",
 ]
+
+[project.urls]
+Homepage     = "https://github.com/OpenVoiceOS/ovos-tool-adapters"
+Repository   = "https://github.com/OpenVoiceOS/ovos-tool-adapters"
+"Bug Tracker" = "https://github.com/OpenVoiceOS/ovos-tool-adapters/issues"
 
 [project.optional-dependencies]
 mcp  = ["mcp>=1.0"]
@@ -27,3 +46,6 @@ ovos-utcp-toolbox = "ovos_tool_adapters.utcp:UTCPToolBox"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ovos_tool_adapters*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ovos_tool_adapters.version.__version__" }
