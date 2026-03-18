@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ovos-tool-adapters"
+version = "0.1.0a1"
+description = "MCP and UTCP ToolBox plugins for the OVOS agentic loop"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "OpenVoiceOS" }]
+dependencies = [
+    "ovos-plugin-manager>=0.7.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+mcp  = ["mcp>=1.0"]
+utcp = ["utcp>=1.1"]
+dev  = ["pytest>=7.0", "pytest-cov", "pytest-asyncio"]
+
+[project.entry-points."opm.agents.toolbox"]
+ovos-mcp-toolbox  = "ovos_tool_adapters.mcp:MCPToolBox"
+ovos-utcp-toolbox = "ovos_tool_adapters.utcp:UTCPToolBox"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ovos_tool_adapters*"]
