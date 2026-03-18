@@ -1,31 +1,37 @@
 # ovos-tool-adapters
 
-Bridges **MCP** (Model Context Protocol) and **UTCP** (Universal Tool Calling Protocol) servers into the OVOS agentic loop as standard `ToolBox` plugins. Agents consuming these toolboxes need no protocol awareness.
+Bridges **MCP** (Model Context Protocol) and **UTCP** (Universal Tool Calling Protocol) servers into the OVOS agentic loop as standard `ToolBox` plugins. Agents consuming these toolboxes need no protocol awareness — the adapter handles connection, schema translation, and sync/async bridging transparently.
 
-## Architecture
+## When to use this
 
-| Module | Role |
+| Use case | Plugin |
 |---|---|
-| `_async_runner.py` — `_AsyncRunner` | Daemon-thread event loop; synchronous `run(coro)` bridge |
-| `_schema.py` — `_schema_to_pydantic` | JSON Schema → dynamic Pydantic `ToolArguments` class |
-| `_schema.py` — `AdapterToolOutput` | Shared output model (`content`, `is_error`, `raw`) |
-| `mcp.py` — `MCPToolBox` | MCP adapter; stdio / SSE / HTTP transports |
-| `utcp.py` — `UTCPToolBox` | UTCP adapter; any UTCP-supported transport |
+| Connect to any MCP server (stdio subprocess, SSE, HTTP) | `ovos-mcp-toolbox` |
+| Connect to any UTCP server (HTTP, SSE, CLI, WebSocket, MCP, …) | `ovos-utcp-toolbox` |
 
-`_AsyncRunner` owns one `asyncio` loop in a daemon thread. All async MCP/UTCP calls are submitted via `asyncio.run_coroutine_threadsafe` and waited on synchronously, satisfying the `ToolBox.discover_tools()` / `call_tool()` synchronous contract while keeping the client session alive between calls.
+## Navigation
 
-## Installation
+| Doc | Contents |
+|---|---|
+| [installation.md](installation.md) | Prerequisites, pip extras, editable install |
+| [mcp.md](mcp.md) | `MCPToolBox` — transports, config reference, persona example |
+| [utcp.md](utcp.md) | `UTCPToolBox` — config reference, persona example |
+| [configuration.md](configuration.md) | Full config key table for both plugins |
+| [architecture.md](architecture.md) | `_AsyncRunner`, schema bridge, lifecycle |
+| [MAINTAINERS_GUIDE.md](MAINTAINERS_GUIDE.md) | Release process, CI/CD, contribution workflow |
+
+## Quick start
 
 ```bash
-pip install ovos-tool-adapters[mcp]   # MCP support
-pip install ovos-tool-adapters[utcp]  # UTCP support
-pip install ovos-tool-adapters[mcp,utcp]
+pip install ovos-tool-adapters[mcp]
 ```
 
-## Persona Configuration
+Persona JSON:
 
 ```json
 {
+  "name": "researcher",
+  "chat_module": "ovos-react-loop",
   "toolboxes": ["ovos-mcp-toolbox"],
   "ovos-mcp-toolbox": {
     "transport": "stdio",
@@ -36,22 +42,12 @@ pip install ovos-tool-adapters[mcp,utcp]
 }
 ```
 
-## Config Reference
+## Key classes
 
-### MCPToolBox (`ovos-mcp-toolbox`)
-
-| Key | Required | Description |
-|---|---|---|
-| `transport` | yes | `"stdio"` \| `"sse"` \| `"http"` |
-| `command` | stdio | Executable, e.g. `"uvx"` |
-| `args` | stdio | Argument list |
-| `env` | stdio | Extra env vars dict |
-| `url` | sse/http | Server URL |
-| `timeout` | no | Seconds per call (default 30) |
-
-### UTCPToolBox (`ovos-utcp-toolbox`)
-
-| Key | Required | Description |
-|---|---|---|
-| `utcp_config` | yes | Dict passed to `UtcpClientConfig(**...)` |
-| `timeout` | no | Seconds per call (default 30) |
+| Class | File |
+|---|---|
+| `MCPToolBox` — MCP adapter | `ovos_tool_adapters/mcp.py` |
+| `UTCPToolBox` — UTCP adapter | `ovos_tool_adapters/utcp.py` |
+| `_AsyncRunner` — sync/async bridge | `ovos_tool_adapters/_async_runner.py` |
+| `AdapterToolOutput` — shared output model | `ovos_tool_adapters/_schema.py` |
+| `_schema_to_pydantic` — JSON Schema → Pydantic | `ovos_tool_adapters/_schema.py` |
