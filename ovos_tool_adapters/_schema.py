@@ -13,7 +13,17 @@
 
 from typing import Any, Dict, List, Optional, Type
 
-from ovos_plugin_manager.templates.agent_tools import ToolArguments, ToolOutput
+try:
+    from ovos_plugin_manager.templates.agent_tools import ToolArguments, ToolOutput
+except ImportError:
+    from pydantic import BaseModel
+
+    class ToolArguments(BaseModel):
+        pass
+
+    class ToolOutput(BaseModel):
+        pass
+
 from pydantic import Field, create_model
 
 
