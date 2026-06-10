@@ -38,6 +38,7 @@ Repository   = "https://github.com/OpenVoiceOS/ovos-tool-adapters"
 mcp  = ["mcp>=1.0"]
 utcp = ["utcp>=1.1"]
 dev  = ["pytest>=7.0", "pytest-cov", "pytest-asyncio"]
+test = ["pytest>=7.0", "pytest-cov", "pytest-asyncio"]
 
 [project.entry-points."opm.agents.toolbox"]
 ovos-mcp-toolbox  = "ovos_tool_adapters.mcp:MCPToolBox"
