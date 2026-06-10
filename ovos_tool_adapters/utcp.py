@@ -18,14 +18,19 @@ from ovos_utils.log import LOG
 from ovos_tool_adapters._async_runner import _AsyncRunner
 from ovos_tool_adapters._schema import AdapterToolOutput, _schema_to_pydantic
 
+try:
+    from ovos_plugin_manager.templates.agent_tools import ToolBox, AgentTool, ToolArguments
+except ImportError:
+    class _ToolBoxStub:
+        def __init__(self, toolbox_id=None, bus=None):
+            self.toolbox_id = toolbox_id
+            self.tools = {}
+    ToolBox = _ToolBoxStub
+    AgentTool = type("AgentTool", (), {})
+    ToolArguments = type("ToolArguments", (), {})
 
-def _get_toolbox_base():
-    """Lazy import of ToolBox to avoid hard dependency on an unreleased OPM."""
-    from ovos_plugin_manager.templates.agent_tools import ToolBox
-    return ToolBox
 
-
-class UTCPToolBox(_get_toolbox_base()):
+class UTCPToolBox(ToolBox):
     """
     A ``ToolBox`` plugin that bridges any UTCP server into the OVOS agentic loop.
 
@@ -132,8 +137,6 @@ class UTCPToolBox(_get_toolbox_base()):
         Returns:
             List of ``AgentTool`` objects matching the server's tool list.
         """
-        from ovos_plugin_manager.templates.agent_tools import AgentTool, ToolArguments
-
         try:
             utcp_tools = self._runner.run(self._connect_and_list(), timeout=self._timeout)
         except ImportError as exc:
