@@ -13,14 +13,19 @@
 
 from typing import Any, Dict, List, Optional
 
-from ovos_plugin_manager.templates.agent_tools import AgentTool, ToolArguments, ToolBox
 from ovos_utils.log import LOG
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
 from ovos_tool_adapters._schema import AdapterToolOutput, _schema_to_pydantic
 
 
-class MCPToolBox(ToolBox):
+def _get_toolbox_base():
+    """Lazy import of ToolBox to avoid hard dependency on an unreleased OPM."""
+    from ovos_plugin_manager.templates.agent_tools import ToolBox
+    return ToolBox
+
+
+class MCPToolBox(_get_toolbox_base()):
     """
     A ``ToolBox`` plugin that bridges any MCP server into the OVOS agentic loop.
 
@@ -131,7 +136,7 @@ class MCPToolBox(ToolBox):
     # ToolBox interface
     # ------------------------------------------------------------------
 
-    def _call_mcp_tool(self, name: str, args: ToolArguments) -> AdapterToolOutput:
+    def _call_mcp_tool(self, name: str, args: Any) -> AdapterToolOutput:
         """
         Synchronous wrapper around the async MCP tool call.
 
@@ -157,7 +162,7 @@ class MCPToolBox(ToolBox):
             raw=raw_blocks,
         )
 
-    def discover_tools(self) -> List[AgentTool]:
+    def discover_tools(self) -> List[Any]:
         """
         Connect to the MCP server and return one ``AgentTool`` per MCP tool.
 
@@ -166,6 +171,8 @@ class MCPToolBox(ToolBox):
         Returns:
             List of ``AgentTool`` objects matching the server's tool list.
         """
+        from ovos_plugin_manager.templates.agent_tools import AgentTool, ToolArguments
+
         try:
             mcp_tools = self._runner.run(self._connect_and_list(), timeout=self._timeout)
         except ImportError as exc:
