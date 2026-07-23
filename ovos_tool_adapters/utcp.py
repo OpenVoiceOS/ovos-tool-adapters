@@ -37,26 +37,24 @@ class UTCPToolBox(ToolBox):
     Entry point group: ``opm.agents.toolbox``
     """
 
-    toolbox_id = "ovos-utcp-toolbox"
-
     def __init__(self,
                  config: Optional[Dict[str, Any]] = None,
                  bus: Optional[Union[MessageBusClient, FakeBus]] = None,
-                 toolbox_id: Optional[str] = None) -> None:
+                 toolbox_id: str = "ovos-utcp-toolbox") -> None:
         """
         Initialise the toolbox and start the async runner.
 
         Args:
             config: Plugin configuration dict; see class docstring for keys.
             bus: The OVOS Messagebus client instance.
-            toolbox_id: Optional per-instance override of the class-level
-                ``toolbox_id`` so multiple UTCP servers can be fronted at once.
+            toolbox_id: Per-instance identifier, so multiple UTCP servers can
+                be fronted at once. Defaults to ``"ovos-utcp-toolbox"``.
         """
         self.config: Dict[str, Any] = config or {}
         self._timeout: int = int(self.config.get("timeout", 30))
         self._runner: _AsyncRunner = _AsyncRunner()
         self._client: Optional[Any] = None
-        super().__init__(config=config, bus=bus, toolbox_id=toolbox_id)
+        super().__init__(toolbox_id=toolbox_id, config=config, bus=bus)
 
     # ------------------------------------------------------------------
     # Internal async helpers
