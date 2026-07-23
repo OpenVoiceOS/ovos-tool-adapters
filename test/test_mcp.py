@@ -92,6 +92,10 @@ def mcp_toolbox(fake_mcp_tools, monkeypatch):
     return tb
 
 
+def test_mcp_toolbox_id_default(mcp_toolbox):
+    assert mcp_toolbox.toolbox_id == "ovos-mcp-toolbox"
+
+
 def test_mcp_discovers_tools(mcp_toolbox):
     tools = list(mcp_toolbox.tools.values())
     assert len(tools) == 1

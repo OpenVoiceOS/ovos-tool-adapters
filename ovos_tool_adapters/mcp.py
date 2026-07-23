@@ -11,9 +11,11 @@
 # limitations under the License.
 """MCPToolBox — exposes an MCP server as an OVOS ToolBox plugin."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
+from ovos_bus_client import MessageBusClient
 from ovos_plugin_manager.templates.agent_tools import AgentTool, ToolArguments, ToolBox
+from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
@@ -40,14 +42,18 @@ class MCPToolBox(ToolBox):
     Entry point group: ``opm.agents.toolbox``
     """
 
-    toolbox_id = "ovos-mcp-toolbox"
-
-    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self,
+                 config: Optional[Dict[str, Any]] = None,
+                 bus: Optional[Union[MessageBusClient, FakeBus]] = None,
+                 toolbox_id: str = "ovos-mcp-toolbox") -> None:
         """
         Initialise the toolbox, start the async runner, and connect to the MCP server.
 
         Args:
             config: Plugin configuration dict; see class docstring for keys.
+            bus: The OVOS Messagebus client instance.
+            toolbox_id: Per-instance identifier, so multiple MCP servers can be
+                fronted at once. Defaults to ``"ovos-mcp-toolbox"``.
         """
         self.config: Dict[str, Any] = config or {}
         self._timeout: int = int(self.config.get("timeout", 30))
@@ -56,7 +62,7 @@ class MCPToolBox(ToolBox):
         self._session: Optional[Any] = None
         self._transport_cm: Optional[Any] = None
         self._session_cm: Optional[Any] = None
-        super().__init__(toolbox_id=self.toolbox_id)
+        super().__init__(toolbox_id=toolbox_id, config=config, bus=bus)
 
     # ------------------------------------------------------------------
     # Internal async helpers

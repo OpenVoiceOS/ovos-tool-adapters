@@ -63,6 +63,10 @@ def utcp_toolbox(monkeypatch):
     return tb
 
 
+def test_utcp_toolbox_id_default(utcp_toolbox):
+    assert utcp_toolbox.toolbox_id == "ovos-utcp-toolbox"
+
+
 def test_utcp_discovers_tools(utcp_toolbox):
     tools = list(utcp_toolbox.tools.values())
     assert len(tools) == 1
