@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.1a1) (2026-07-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.0a2...0.1.1a1)
+
+**Merged pull requests:**
+
+- fix: adopt config/bus ToolBox constructor contract [\#4](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/4) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.1.0a2](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.0a2) (2026-06-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/68ea48560322181e63f1271c6f8f20e40230b295...0.1.0a2)
