@@ -16,7 +16,7 @@ def _make_utcp_tool(name: str, description: str, schema: Dict[str, Any]) -> Simp
 
 class _FakeRunner:
     def run(self, coro: Any, timeout: int = 30) -> Any:
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     def close(self) -> None:
         pass

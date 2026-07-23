@@ -22,7 +22,10 @@ jobs:
       version_file: 'ovos_tool_adapters/version.py'
       update_changelog: true
       publish_prerelease: true
-      propose_release: true
+      # no `master` branch exists yet for this repo (still alpha-only) — the
+      # release PR step fails with "No commits between master and release-*"
+      # until a stable branch is cut. Re-enable once `master` exists.
+      propose_release: false
       changelog_max_issues: 50
       publish_pypi: true
       notify_matrix: true
