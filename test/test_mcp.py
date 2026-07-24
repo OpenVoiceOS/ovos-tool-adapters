@@ -30,7 +30,7 @@ class _FakeRunner:
         self._coros: List[Any] = []
 
     def run(self, coro: Any, timeout: int = 30) -> Any:
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     def close(self) -> None:
         pass
