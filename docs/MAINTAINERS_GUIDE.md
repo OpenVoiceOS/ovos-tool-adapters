@@ -1,4 +1,4 @@
-# Maintainers Guide — ovos-tool-adapters
+# Maintainers Guide for ovos-tool-adapters
 
 ## Repository layout
 
@@ -22,7 +22,7 @@ ovos-tool-adapters/
 
 ## Versioning
 
-Version is read from `ovos_tool_adapters/version.py` — do **not** edit `pyproject.toml` version manually.
+Version is read from `ovos_tool_adapters/version.py`. Do **not** edit the `pyproject.toml` version manually.
 
 ```python
 # START_VERSION_BLOCK
@@ -43,8 +43,8 @@ The release workflow bumps this block automatically from PR labels:
 
 1. Open a PR targeting `dev`.
 2. Label the PR (`breaking`, `feature`, `fix`, or none).
-3. Merge — the release workflow bumps the version, publishes alpha to PyPI, and opens a release PR to `master`.
-4. Review and merge the release PR to `master` — stable is published automatically.
+3. Merge. The release workflow bumps the version, publishes alpha to PyPI, and opens a release PR to `master`.
+4. Review and merge the release PR to `master`. Stable is published automatically.
 
 **Do not manually push to `master`.**
 
@@ -58,7 +58,7 @@ uv run pytest test/ -v --cov=ovos_tool_adapters --cov-report=term-missing
 uv run pytest test/test_mcp.py -v
 ```
 
-Tests are fully mocked — no live MCP or UTCP server is needed.
+Tests are fully mocked, so no live MCP or UTCP server is needed.
 
 ## CI/CD workflows
 
@@ -82,13 +82,13 @@ All workflows delegate to `OpenVoiceOS/gh-automations@dev`.
 | `PYPI_TOKEN` | Publish to PyPI |
 | `MATRIX_TOKEN` | Release notifications |
 
-Set at the org level — all repos inherit them.
+Set at the org level. All repos inherit them.
 
 ## Adding a new transport
 
 To support a new MCP transport (e.g. a future WebSocket transport):
 
-1. Add a branch to `MCPToolBox._connect_and_list()` — `mcp.py:78`
+1. Add a branch to `MCPToolBox._connect_and_list()` (`mcp.py:78`).
 2. Add the corresponding import from `mcp.client.*`
 3. Update `docs/mcp.md` transport table
 4. Add a test case in `test/test_mcp.py`
@@ -99,8 +99,11 @@ Core: `ovos-plugin-manager>=0.7.0`, `pydantic>=2.0`
 Optional: `mcp>=1.0` (MCP support), `utcp>=1.1` (UTCP support)
 Dev: `pytest>=7.0`, `pytest-cov`, `pytest-asyncio`
 
-Optional deps are guarded by `try/except ImportError` — never add them to `dependencies`.
+Optional deps are guarded by `try/except ImportError`. Never add them to `dependencies`.
 
 ## Audit items
 
 See `AUDIT.md` for known issues and technical debt. Update it when new issues are found.
+
+---
+[← Architecture](architecture.md) · [Home](index.md)

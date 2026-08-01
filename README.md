@@ -6,7 +6,7 @@
 
 Bridges **MCP** (Model Context Protocol) and **UTCP** (Universal Tool Calling Protocol) servers into the [OVOS agentic loop](https://github.com/OpenVoiceOS/ovos-agentic-loop) as standard `ToolBox` plugins.
 
-Configure an MCP or UTCP server in your persona JSON and the agent loop consumes it like any other toolbox — no protocol awareness required.
+Configure an MCP or UTCP server in your persona JSON. The agent loop then consumes it like any other toolbox, with no protocol awareness required.
 
 ## Install
 
@@ -65,9 +65,9 @@ Any transport supported by the installed UTCP version (HTTP, SSE, CLI, WebSocket
 
 ## How it works
 
-- A daemon-thread asyncio event loop keeps MCP/UTCP sessions alive between calls — no reconnect per tool call.
+- A daemon-thread asyncio event loop keeps MCP/UTCP sessions alive between calls, so there is no reconnect per tool call.
 - Each server's JSON Schema is translated to a Pydantic model at discovery time, so the LLM sees the **actual** input schema.
-- Missing `mcp`/`utcp` packages degrade gracefully: the toolbox returns an empty tool list and logs a warning — the agent loop is not affected.
+- Missing `mcp`/`utcp` packages degrade gracefully: the toolbox returns an empty tool list and logs a warning, and the agent loop is not affected.
 
 Full documentation: [docs/](docs/index.md)
 
@@ -90,4 +90,4 @@ under grant agreement No [101135429](https://cordis.europa.eu/project/id/1011354
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE).

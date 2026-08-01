@@ -1,8 +1,8 @@
 # MCPToolBox
 
-`MCPToolBox` — `ovos_tool_adapters/mcp.py`
+`MCPToolBox` (`ovos_tool_adapters/mcp.py`)
 
-Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On construction it connects to the server, calls `list_tools`, and registers one `AgentTool` per MCP tool. The session is kept alive for the lifetime of the toolbox — no reconnection per call.
+Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On construction it connects to the server, calls `list_tools`, and registers one `AgentTool` per MCP tool. The session stays alive for the lifetime of the toolbox, so there is no reconnection per call.
 
 ## Supported transports
 
@@ -16,16 +16,16 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `transport` | str | — | **Required.** `"stdio"` \| `"sse"` \| `"http"` |
-| `command` | str | — | stdio: executable, e.g. `"uvx"`, `"python"`, `"npx"` |
+| `transport` | str | n/a | **Required.** `"stdio"` \| `"sse"` \| `"http"` |
+| `command` | str | n/a | stdio: executable, e.g. `"uvx"`, `"python"`, `"npx"` |
 | `args` | list[str] | `[]` | stdio: argument list, e.g. `["mcp-server-fetch"]` |
 | `env` | dict[str,str] | `None` | stdio: extra environment variables merged into the subprocess env |
-| `url` | str | — | sse/http: full server URL including scheme and port |
+| `url` | str | n/a | sse/http: full server URL including scheme and port |
 | `timeout` | int | `30` | Seconds to wait per tool call or connection attempt |
 
 ## Persona config examples
 
-### stdio — run an MCP server as a subprocess
+### stdio: run an MCP server as a subprocess
 
 ```json
 {
@@ -39,7 +39,7 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 }
 ```
 
-### stdio — Python MCP server with env vars
+### stdio: Python MCP server with env vars
 
 ```json
 {
@@ -53,7 +53,7 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 }
 ```
 
-### SSE — remote MCP server
+### SSE: remote MCP server
 
 ```json
 {
@@ -65,7 +65,7 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 }
 ```
 
-### HTTP — streamable HTTP MCP server
+### HTTP: streamable HTTP MCP server
 
 ```json
 {
@@ -79,11 +79,11 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 
 ## How tools are exposed
 
-Each MCP `Tool` object has a `name`, `description`, and `inputSchema` (JSON Schema). `MCPToolBox.discover_tools` — `mcp.py:160`:
+Each MCP `Tool` object has a `name`, `description`, and `inputSchema` (JSON Schema). `MCPToolBox.discover_tools` (`mcp.py:160`) does the following:
 
 1. Calls `_schema_to_pydantic(tool.name + "_args", tool.inputSchema)` to build a dynamic Pydantic `ToolArguments` subclass with the correct field types and required/optional markers.
-2. Wraps `session.call_tool(name, args)` in `_call_mcp_tool` — `mcp.py:134`.
-3. Returns `AdapterToolOutput(content=..., is_error=..., raw=...)` — `_schema.py:53`.
+2. Wraps `session.call_tool(name, args)` in `_call_mcp_tool` (`mcp.py:134`).
+3. Returns `AdapterToolOutput(content=..., is_error=..., raw=...)` (`_schema.py:53`).
 
 The LLM receives the **real JSON Schema** from the MCP server via `tool_json_list`, not a generic passthrough.
 
@@ -132,3 +132,6 @@ Call `toolbox.close()` explicitly when done, or rely on `__del__`. For long-runn
 | mcp-server-filesystem | `uvx mcp-server-filesystem` | `"uvx"` | `["mcp-server-filesystem", "/path"]` |
 
 See the [MCP server registry](https://github.com/modelcontextprotocol/servers) for a full list.
+
+---
+[← Installation](installation.md) · [Home](index.md) · [UTCPToolBox →](utcp.md)
