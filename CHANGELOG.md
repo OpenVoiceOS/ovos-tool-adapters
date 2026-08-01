@@ -1,29 +1,12 @@
 # Changelog
 
-## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.2a1) (2026-07-24)
+## [0.1.3a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.3a1) (2026-08-01)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.1a1...0.1.2a1)
-
-**Merged pull requests:**
-
-- fix: py3.14 asyncio test failure and disable non-functional propose\_release [\#5](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/5) ([JarbasAl](https://github.com/JarbasAl))
-- chore: Configure Renovate [\#1](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/1) ([renovate[bot]](https://github.com/apps/renovate))
-
-## [0.1.1a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.1a1) (2026-07-23)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.0a2...0.1.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.3a1)
 
 **Merged pull requests:**
 
-- fix: adopt config/bus ToolBox constructor contract [\#4](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/4) ([JarbasAl](https://github.com/JarbasAl))
-
-## [0.1.0a2](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.0a2) (2026-06-13)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/68ea48560322181e63f1271c6f8f20e40230b295...0.1.0a2)
-
-**Merged pull requests:**
-
-- docs: add NLnet/NGI0 attribution [\#3](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/3) ([JarbasAl](https://github.com/JarbasAl))
+- docs: rewrite README in Simplified Technical English [\#7](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/7) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
