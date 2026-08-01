@@ -1,8 +1,8 @@
 # UTCPToolBox
 
-`UTCPToolBox` — `ovos_tool_adapters/utcp.py`
+`UTCPToolBox` (`ovos_tool_adapters/utcp.py`)
 
-Bridges any UTCP (Universal Tool Calling Protocol) server into the OVOS agentic loop. UTCP is transport-agnostic — it wraps HTTP, SSE, CLI, WebSocket, MCP, and more under a single `UtcpClient` API. Configuration is passed directly to `UtcpClientConfig`, so any transport supported by the installed UTCP version works without changes to the adapter.
+Bridges any UTCP (Universal Tool Calling Protocol) server into the OVOS agentic loop. UTCP is transport-agnostic: it wraps HTTP, SSE, CLI, WebSocket, MCP, and more under a single `UtcpClient` API. Configuration is passed directly to `UtcpClientConfig`, so any transport supported by the installed UTCP version works without changes to the adapter.
 
 ## Config reference
 
@@ -60,11 +60,11 @@ The contents of `utcp_config` depend on the UTCP version and transport. Refer to
 
 ## How tools are exposed
 
-Each UTCP `Tool` has `name`, `description`, and `input_schema` (JSON Schema). `UTCPToolBox.discover_tools` — `utcp.py:121`:
+Each UTCP `Tool` has `name`, `description`, and `input_schema` (JSON Schema). `UTCPToolBox.discover_tools` (`utcp.py:121`) does the following:
 
 1. Calls `UtcpClient.create(config=...)` and `client.get_tools()` to enumerate all tools from all configured providers.
-2. Calls `_schema_to_pydantic(tool.name + "_args", tool.input_schema)` for each tool — `_schema.py:30`.
-3. Wraps `client.call_tool(name, args)` in `_call_utcp_tool` — `utcp.py:93`.
+2. Calls `_schema_to_pydantic(tool.name + "_args", tool.input_schema)` for each tool (`_schema.py:30`).
+3. Wraps `client.call_tool(name, args)` in `_call_utcp_tool` (`utcp.py:93`).
 
 ## Tool output
 
@@ -76,7 +76,7 @@ All UTCP tool calls return `AdapterToolOutput`:
 | `is_error` | bool | `True` if the response contained `is_error: true` |
 | `raw` | list[dict] | Original response block(s) |
 
-Response normalisation — `utcp.py:108`:
+Response normalisation (`utcp.py:108`):
 - `str` response → `content = str`, `raw = [{"type": "text", "text": str}]`
 - `dict` response → `content = dict["text"] or dict["content"] or str(dict)`
 - Other → `content = str(result)`, `raw = [{"type": "raw", ...}]`
@@ -97,3 +97,6 @@ call_tool("search", {"query": "..."})
       → _runner.run(client.call_tool(...))
       → AdapterToolOutput returned
 ```
+
+---
+[← MCPToolBox](mcp.md) · [Home](index.md) · [Configuration →](configuration.md)

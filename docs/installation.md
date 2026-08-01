@@ -19,7 +19,7 @@ pip install ovos-tool-adapters[utcp]
 pip install ovos-tool-adapters[mcp,utcp]
 ```
 
-`mcp` and `utcp` are **optional**. The package installs and OPM loads without them; a toolbox configured for a missing protocol returns an empty tool list and logs a warning — it does not crash the agent loop.
+`mcp` and `utcp` are **optional**. The package installs and OPM loads without them. A toolbox configured for a missing protocol returns an empty tool list and logs a warning, and it does not crash the agent loop.
 
 ## Editable install (development)
 
@@ -40,3 +40,6 @@ print(find_plugins('opm.agents.toolbox'))
 "
 # Expected: {'ovos-mcp-toolbox': ..., 'ovos-utcp-toolbox': ...}
 ```
+
+---
+[Home](index.md) · [MCPToolBox →](mcp.md)
