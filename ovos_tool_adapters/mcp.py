@@ -157,9 +157,13 @@ class MCPToolBox(ToolBox):
         text_parts = [
             b.get("text", "") for b in raw_blocks if b.get("type") == "text"
         ]
+        # mcp>=2.0 renamed ``CallToolResult.isError`` to ``is_error``.
+        is_error = getattr(result, "is_error", None)
+        if is_error is None:
+            is_error = getattr(result, "isError", False)
         return AdapterToolOutput(
             content="\n".join(text_parts),
-            is_error=bool(result.isError),
+            is_error=bool(is_error),
             raw=raw_blocks,
         )
 
@@ -183,9 +187,13 @@ class MCPToolBox(ToolBox):
 
         agent_tools: List[AgentTool] = []
         for mcp_tool in mcp_tools:
+            # mcp>=2.0 renamed ``Tool.inputSchema`` to ``Tool.input_schema``.
+            input_schema = getattr(mcp_tool, "input_schema", None)
+            if input_schema is None:
+                input_schema = getattr(mcp_tool, "inputSchema", None)
             args_model = _schema_to_pydantic(
                 f"{mcp_tool.name}_args",
-                mcp_tool.inputSchema or {},
+                input_schema or {},
             )
             name_copy = mcp_tool.name  # capture for closure
 
