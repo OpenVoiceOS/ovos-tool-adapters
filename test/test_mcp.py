@@ -23,19 +23,6 @@ def _make_call_result(content: List[Any], is_error: bool = False) -> SimpleNames
     return SimpleNamespace(content=content, isError=is_error)
 
 
-class _FakeRunner:
-    """Synchronous stand-in for _AsyncRunner."""
-
-    def __init__(self) -> None:
-        self._coros: List[Any] = []
-
-    def run(self, coro: Any, timeout: int = 30) -> Any:
-        return asyncio.run(coro)
-
-    def close(self) -> None:
-        pass
-
-
 @pytest.fixture()
 def fake_mcp_tools():
     return [
@@ -74,10 +61,10 @@ def mcp_toolbox(fake_mcp_tools, monkeypatch):
         async def __aexit__(self, *args):
             pass
 
-    # Patch _AsyncRunner to use the synchronous loop executor
-    monkeypatch.setattr("ovos_tool_adapters.mcp._AsyncRunner", _FakeRunner)
-
-    # Patch MCP imports inside mcp.py
+    # Patch MCP imports inside mcp.py. The real _AsyncRunner (a background
+    # asyncio loop) is used as-is — only the `mcp` package itself is faked —
+    # since the teardown fix relies on real asyncio Task semantics that a
+    # synchronous stand-in can't reproduce.
     fake_mcp_mod = MagicMock()
     fake_mcp_mod.ClientSession.return_value = _FakeSession()
     fake_mcp_mod.client.stdio.StdioServerParameters = SimpleNamespace
@@ -89,7 +76,8 @@ def mcp_toolbox(fake_mcp_tools, monkeypatch):
         "mcp.client.stdio": fake_mcp_mod.client.stdio,
     }):
         tb = MCPToolBox(config={"transport": "stdio", "command": "uvx", "args": ["mcp-server-fetch"]})
-    return tb
+    yield tb
+    tb.close()
 
 
 def test_mcp_toolbox_id_default(mcp_toolbox):
@@ -123,12 +111,12 @@ def test_mcp_unknown_tool_raises(mcp_toolbox):
 
 
 def test_mcp_missing_package_returns_empty(monkeypatch):
-    monkeypatch.setattr("ovos_tool_adapters.mcp._AsyncRunner", _FakeRunner)
-
-    class _FailRunner(_FakeRunner):
-        def run(self, coro, timeout=30):
-            raise ImportError("mcp not installed")
-
-    monkeypatch.setattr("ovos_tool_adapters.mcp._AsyncRunner", _FailRunner)
-    tb = MCPToolBox(config={"transport": "stdio", "command": "uvx", "args": []})
-    assert tb.tools == {}
+    # Simulate the `mcp` package not being installed: the driver task's
+    # `from mcp import ClientSession` raises ImportError, which is routed
+    # back through the `ready` future to discover_tools().
+    with patch.dict("sys.modules", {"mcp": None}):
+        tb = MCPToolBox(config={"transport": "stdio", "command": "uvx", "args": []})
+        try:
+            assert tb.tools == {}
+        finally:
+            tb.close()
