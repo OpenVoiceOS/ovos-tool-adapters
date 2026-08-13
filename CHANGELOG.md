@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.5a1) (2026-08-13)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.4a1...0.1.5a1)
+
+**Merged pull requests:**
+
+- fix: tear down MCPToolBox's async session on the same task it was opened on [\#9](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/9) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.1.4a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.4a1) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.3a1...0.1.4a1)
