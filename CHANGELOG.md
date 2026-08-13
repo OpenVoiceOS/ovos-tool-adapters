@@ -1,12 +1,24 @@
 # Changelog
 
+## [0.1.4a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.4a1) (2026-08-13)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.3a1...0.1.4a1)
+
+**Merged pull requests:**
+
+- fix: mcp 2.x client compatibility [\#8](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/8) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.1.3a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.3a1) (2026-08-01)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2a1...0.1.3a1)
 
 **Merged pull requests:**
 
 - docs: rewrite README in Simplified Technical English [\#7](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/7) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.2a1) (2026-07-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.2a1)
 
 
 
