@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.6a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.6a1) (2026-09-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.5a1...0.1.6a1)
+
+**Merged pull requests:**
+
+- fix: check utcp is importable before creating UTCPToolBox's connect coroutine [\#10](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/10) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.1.5a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.5a1) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.4a1...0.1.5a1)
@@ -18,15 +26,11 @@
 
 ## [0.1.3a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.3a1) (2026-08-01)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2a1...0.1.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.3a1)
 
 **Merged pull requests:**
 
 - docs: rewrite README in Simplified Technical English [\#7](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/7) ([JarbasAl](https://github.com/JarbasAl))
-
-## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.2a1) (2026-07-24)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.2a1)
 
 
 
