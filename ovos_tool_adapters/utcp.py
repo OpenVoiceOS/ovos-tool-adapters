@@ -64,14 +64,16 @@ class UTCPToolBox(ToolBox):
         """
         Create a ``UtcpClient``, register configured providers, and list tools.
 
+        Callers must only invoke this once the ``utcp`` package is known to be
+        importable (see :meth:`discover_tools`) — creating this coroutine and
+        then failing to hand it to the runner before raising would leave it
+        dangling and trigger a "coroutine was never awaited" warning.
+
         Returns:
             List of UTCP ``Tool`` objects.
         """
-        try:
-            from utcp.client import UtcpClient
-            from utcp.client.utcp_client_config import UtcpClientConfig
-        except ImportError as exc:
-            raise ImportError("utcp package is required: pip install 'ovos-tool-adapters[utcp]'") from exc
+        from utcp.client import UtcpClient
+        from utcp.client.utcp_client_config import UtcpClientConfig
 
         utcp_config_dict: Dict[str, Any] = self.config.get("utcp_config", {})
         utcp_cfg = UtcpClientConfig(**utcp_config_dict)
@@ -130,14 +132,26 @@ class UTCPToolBox(ToolBox):
 
         Returns ``[]`` with a warning if the ``utcp`` package is not installed.
 
+        The ``utcp`` package is checked for *before* :meth:`_connect_and_list`
+        is ever called, so on the missing-package path no coroutine is created
+        at all — there is nothing left dangling for asyncio to warn about. When
+        the package is present, the coroutine is created and handed to the
+        runner in the same expression, so it is always scheduled and awaited.
+
         Returns:
             List of ``AgentTool`` objects matching the server's tool list.
         """
         try:
-            utcp_tools = self._runner.run(self._connect_and_list(), timeout=self._timeout)
+            import utcp  # noqa: F401
         except ImportError as exc:
-            LOG.warning(f"UTCPToolBox: {exc} — no tools loaded.")
+            LOG.warning(
+                f"UTCPToolBox: utcp package is required: pip install 'ovos-tool-adapters[utcp]' ({exc}) "
+                "— no tools loaded."
+            )
             return []
+
+        try:
+            utcp_tools = self._runner.run(self._connect_and_list(), timeout=self._timeout)
         except Exception as exc:
             LOG.warning(f"UTCPToolBox: failed to connect to UTCP server: {exc}")
             return []

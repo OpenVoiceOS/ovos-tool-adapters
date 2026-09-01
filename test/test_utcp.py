@@ -1,5 +1,8 @@
 """Tests for UTCPToolBox — all UTCP I/O is mocked."""
 import asyncio
+import gc
+import sys
+import warnings
 from types import SimpleNamespace
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
@@ -92,10 +95,48 @@ def test_utcp_unknown_tool_raises(utcp_toolbox):
 
 
 def test_utcp_missing_package_returns_empty(monkeypatch):
-    class _FailRunner(_FakeRunner):
-        def run(self, coro, timeout=30):
-            raise ImportError("utcp not installed")
-
-    monkeypatch.setattr("ovos_tool_adapters.utcp._AsyncRunner", _FailRunner)
+    monkeypatch.setattr("ovos_tool_adapters.utcp._AsyncRunner", _FakeRunner)
+    # Setting the module to None in sys.modules is the standard way to make
+    # `import utcp` raise ImportError regardless of what is actually installed.
+    monkeypatch.setitem(sys.modules, "utcp", None)
     tb = UTCPToolBox(config={"utcp_config": {}})
+    assert tb.tools == {}
+
+
+def test_utcp_missing_package_does_not_leave_coroutine_unawaited(monkeypatch):
+    """
+    Regression test: discover_tools() used to unconditionally create the
+    ``_connect_and_list`` coroutine and hand it to ``self._runner.run(...)``.
+    If the runner failed to schedule it — anything raised on the way to, or
+    inside, ``run()`` before it reaches ``asyncio.run_coroutine_threadsafe`` —
+    the coroutine was silently garbage collected without ever running,
+    producing a "coroutine '_connect_and_list' was never awaited"
+    RuntimeWarning. That is exactly the shape of problem fixed for
+    MCPToolBox's session teardown.
+
+    The fix checks that ``utcp`` is importable *before* ``_connect_and_list``
+    is ever called, so on the missing-package path no coroutine is created at
+    all, regardless of what the runner would have done with it.
+    """
+
+    class _LeakyRunner:
+        """A runner that never touches the coroutine it is handed."""
+
+        def run(self, coro, timeout=30):
+            raise RuntimeError("runner unavailable")
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("ovos_tool_adapters.utcp._AsyncRunner", _LeakyRunner)
+    monkeypatch.setitem(sys.modules, "utcp", None)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        tb = UTCPToolBox(config={"utcp_config": {}})
+        gc.collect()
+
+    unawaited = [w for w in caught
+                 if issubclass(w.category, RuntimeWarning) and "was never awaited" in str(w.message)]
+    assert not unawaited, f"unawaited coroutine leaked: {unawaited}"
     assert tb.tools == {}
