@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.6a3](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.6a3) (2026-09-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.6a2...0.1.6a3)
+
+**Merged pull requests:**
+
+- ci: drop the duplicate python-support.yml caller [\#12](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/12) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.1.6a2](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.6a2) (2026-09-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.6a1...0.1.6a2)
