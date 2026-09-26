@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.6a2](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.6a2) (2026-09-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.6a1...0.1.6a2)
+
+**Merged pull requests:**
+
+- ci: drop two inputs build-tests.yml does not declare [\#11](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/11) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.1.6a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.6a1) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.5a1...0.1.6a1)
