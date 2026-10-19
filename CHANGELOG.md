@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.7a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.7a1) (2026-10-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.6a3...0.1.7a1)
+
+**Merged pull requests:**
+
+- fix: port UTCPToolBox to the utcp 1.x client API [\#13](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/13) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.1.6a3](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.6a3) (2026-09-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.6a2...0.1.6a3)
