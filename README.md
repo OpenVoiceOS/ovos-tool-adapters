@@ -68,7 +68,7 @@ The `utcp` extra installs the UTCP 1.x client and its HTTP plugin (`utcp-http`).
 }
 ```
 
-The agent then gets tools such as `ovos_translate.translate_with_source`. Other call template types (CLI, SSE, WebSocket, MCP) need their own UTCP plugin package, for example `utcp-cli`.
+The agent then gets tools such as `ovos_translate_translate_with_source`: the UTCP name `ovos_translate.translate_with_source` with the dot replaced, because function-calling providers reject a dot in a tool name. Other call template types (CLI, SSE, WebSocket, MCP) need their own UTCP plugin package, for example `utcp-cli`.
 
 ## How it works
 

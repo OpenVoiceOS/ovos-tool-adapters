@@ -87,8 +87,8 @@ def test_live_call_tool_round_trip(manual_url):
         "name": "local", "call_template_type": "http",
         "url": manual_url, "http_method": "GET"}]})
     try:
-        assert list(tb.tools) == ["local.echo"]
-        result = tb.call_tool("local.echo", {"text": "hello-utcp"})
+        assert list(tb.tools) == ["local_echo"]
+        result = tb.call_tool("local_echo", {"text": "hello-utcp"})
         assert isinstance(result, AdapterToolOutput)
         assert result.is_error is False
         assert result.content == "echo:hello-utcp"
@@ -105,7 +105,7 @@ def test_live_failed_manual_reports_the_reason(manual_url, monkeypatch):
         {"name": "local", "call_template_type": "http", "url": manual_url, "http_method": "GET"},
     ]})
     try:
-        assert list(tb.tools) == ["local.echo"]
+        assert list(tb.tools) == ["local_echo"]
         assert len(errors) == 1
         assert errors[0].startswith("UTCPToolBox: manual 'locked' loaded no tools: ")
         assert "401" in errors[0]
@@ -122,14 +122,14 @@ def test_live_tool_calls_keep_working_during_a_refresh(manual_url):
     try:
         refresh.start()
         assert _gate.requested.wait(timeout=10)
-        result = tb.call_tool("local.echo", {"text": "during-refresh"})
+        result = tb.call_tool("local_echo", {"text": "during-refresh"})
         assert result.content == "echo:during-refresh"
     finally:
         _gate.hold = False
         _gate.release.set()
         refresh.join(timeout=10)
         tb.close()
-    assert list(tb.tools) == ["local.echo"]
+    assert list(tb.tools) == ["local_echo"]
 
 
 @pytest.mark.parametrize("bad_template, reason", [
@@ -147,8 +147,8 @@ def test_live_invalid_template_is_skipped_and_named(manual_url, monkeypatch, bad
         {"name": "local", "call_template_type": "http", "url": manual_url, "http_method": "GET"},
     ]})
     try:
-        assert list(tb.tools) == ["local.echo"]
-        assert tb.call_tool("local.echo", {"text": "still-here"}).content == "echo:still-here"
+        assert list(tb.tools) == ["local_echo"]
+        assert tb.call_tool("local_echo", {"text": "still-here"}).content == "echo:still-here"
         assert errors == [f"UTCPToolBox: manual_call_templates[0] ({bad_template['name']!r}) skipped: {reason}."]
     finally:
         tb.close()
@@ -175,7 +175,7 @@ def test_live_rejection_without_pydantic_error_names_the_cause(manual_url, monke
         {"name": "local", "call_template_type": "http", "url": manual_url, "http_method": "GET"},
     ]})
     try:
-        assert list(tb.tools) == ["local.echo"]
+        assert list(tb.tools) == ["local_echo"]
         assert errors == [f"UTCPToolBox: manual_call_templates[0] ({bad_template['name']!r}) skipped: {reason}."]
     finally:
         tb.close()
