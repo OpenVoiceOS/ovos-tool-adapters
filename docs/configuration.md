@@ -46,8 +46,13 @@ Both toolboxes are configured via the persona JSON. The top-level key is the `to
   },
   "ovos-utcp-toolbox": {
     "utcp_config": {
-      "tool_providers": [
-        {"name": "search", "provider_type": "http", "url": "http://localhost:8001/tools"}
+      "manual_call_templates": [
+        {
+          "name": "ovos_translate",
+          "call_template_type": "http",
+          "url": "http://localhost:9686/utcp",
+          "http_method": "GET"
+        }
       ]
     }
   }

@@ -3,7 +3,7 @@
 ## Requirements
 
 - Python 3.10+
-- An OVOS installation with `ovos-plugin-manager>=0.7.0`
+- An OVOS installation with `ovos-plugin-manager>=2.11.1a1`
 - An MCP or UTCP server to connect to (not bundled)
 
 ## Pip extras
@@ -18,6 +18,8 @@ pip install ovos-tool-adapters[utcp]
 # Both
 pip install ovos-tool-adapters[mcp,utcp]
 ```
+
+The `mcp` extra installs the `mcp` client SDK. The `utcp` extra installs `utcp` and `utcp-http`. Without `utcp-http`, the UTCP client refuses every manual with `call_template_type: "http"`.
 
 `mcp` and `utcp` are **optional**. The package installs and OPM loads without them. A toolbox configured for a missing protocol returns an empty tool list and logs a warning, and it does not crash the agent loop.
 

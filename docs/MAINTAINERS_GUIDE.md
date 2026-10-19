@@ -95,8 +95,8 @@ To support a new MCP transport (e.g. a future WebSocket transport):
 
 ## Dependencies
 
-Core: `ovos-plugin-manager>=0.7.0`, `pydantic>=2.0`
-Optional: `mcp>=1.0` (MCP support), `utcp>=1.1` (UTCP support)
+Core: `ovos-plugin-manager>=2.11.1a1`, `pydantic>=2.0`
+Optional: `mcp>=2.3.0` (MCP support), `utcp>=1.2.0` and `utcp-http>=1.1.14` (UTCP support)
 Dev: `pytest>=7.0`, `pytest-cov`, `pytest-asyncio`
 
 Optional deps are guarded by `try/except ImportError`. Never add them to `dependencies`.

@@ -67,15 +67,19 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 
 ### HTTP: streamable HTTP MCP server
 
+The OVOS TTS, STT and translate servers serve MCP over streamable HTTP at `/mcp` when you start them with `--mcp`. This config uses a local [ovos-translate-server](https://github.com/OpenVoiceOS/ovos-translate-server) started with `ovos-translate-server --tx-engine <plugin> --mcp`:
+
 ```json
 {
   "ovos-mcp-toolbox": {
     "transport": "http",
-    "url": "http://localhost:8080/mcp",
+    "url": "http://localhost:9686/mcp",
     "timeout": 30
   }
 }
 ```
+
+The toolbox then has the server's MCP tools, `translate` and `detect_language`. A call to `translate` with `{"text": "good morning", "target_lang": "pt", "source_lang": "en"}` returns the translated text in `content`. When the server reports an error, `is_error` is `True` and `content` holds the server's message.
 
 ## How tools are exposed
 
