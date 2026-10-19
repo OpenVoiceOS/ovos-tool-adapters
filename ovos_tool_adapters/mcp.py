@@ -22,7 +22,7 @@ from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
-from ovos_tool_adapters._schema import AdapterToolOutput, _llm_tool_name, _schema_to_pydantic
+from ovos_tool_adapters._schema import AdapterToolOutput, _call_arguments, _llm_tool_name, _schema_to_pydantic
 
 
 class MCPToolBox(ToolBox):
@@ -204,7 +204,7 @@ class MCPToolBox(ToolBox):
             ``AdapterToolOutput`` with concatenated text and raw blocks.
         """
         result = self._runner.run(
-            self._call_tool_async(name, args.model_dump(exclude_none=True)),
+            self._call_tool_async(name, _call_arguments(args)),
             timeout=self._timeout,
         )
         raw_blocks = [block.model_dump() if hasattr(block, "model_dump") else dict(block)
@@ -251,15 +251,17 @@ class MCPToolBox(ToolBox):
                 LOG.error(f"MCPToolBox: tools {exposed[name]!r} and {mcp_tool.name!r} both become "
                           f"{name!r}; {mcp_tool.name!r} skipped.")
                 continue
-            exposed[name] = mcp_tool.name
             # mcp>=2.0 renamed ``Tool.inputSchema`` to ``Tool.input_schema``.
             input_schema = getattr(mcp_tool, "input_schema", None)
             if input_schema is None:
                 input_schema = getattr(mcp_tool, "inputSchema", None)
-            args_model = _schema_to_pydantic(
-                f"{name}_args",
-                input_schema or {},
-            )
+            try:
+                args_model = _schema_to_pydantic(f"{name}_args", input_schema or {})
+            except (Exception, RecursionError) as exc:
+                LOG.error(f"MCPToolBox: tool {mcp_tool.name!r} skipped: its argument schema cannot be "
+                          f"built: {type(exc).__name__}: {exc}")
+                continue
+            exposed[name] = mcp_tool.name
             name_copy = mcp_tool.name  # capture for closure
 
             def _make_call(tool_name: str) -> Any:

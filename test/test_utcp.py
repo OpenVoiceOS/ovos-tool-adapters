@@ -1,5 +1,6 @@
 """Tests for UTCPToolBox — all UTCP I/O is mocked."""
 import asyncio
+import json
 import re
 import gc
 import sys
@@ -35,6 +36,7 @@ class _Clients:
         self.created = 0
         self.closed = 0
         self.called = []
+        self.arguments = []
 
 
 def _fake_utcp_modules(tools_list, clients=None, create_error=None, registered_types=("http",),
@@ -56,6 +58,7 @@ def _fake_utcp_modules(tools_list, clients=None, create_error=None, registered_t
 
         async def call_tool(self, name, args):
             clients.called.append(name)
+            clients.arguments.append(args)
             return {"text": f"result for {args.get('query', '')}", "is_error": False}
 
         async def close(self):
@@ -387,3 +390,187 @@ def test_utcp_long_names_are_cut_to_64_characters_and_clashes_are_collisions(mon
     tb.call_tool(exposed, {"query": "x"})
     assert clients.called == [stem + "_one"]
     assert len(errors) == 1 and repr(stem + "_two") in errors[0]
+
+
+# The shape ovos-persona-server's UTCP manual gives every tool: one ``body``
+# object that holds the tool's own arguments.
+_PERSONA_STYLE_INPUTS = {
+    "type": "object",
+    "properties": {"body": {
+        "title": "SearchArgs", "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "What to look up."},
+            "lang": {"type": "string", "enum": ["en", "pt"], "description": "Article language."},
+        },
+        "required": ["query"],
+    }},
+    "required": ["body"],
+}
+
+
+def test_utcp_nested_body_reaches_the_model_with_its_fields(monkeypatch):
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("wiki.search", "Search", _PERSONA_STYLE_INPUTS)], clients)
+    sent = ToolBox.normalize_tools([tb])
+    assert sent[0]["function"]["parameters"] == _PERSONA_STYLE_INPUTS
+
+
+def test_utcp_nested_body_is_validated_and_forwarded_whole(monkeypatch):
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("wiki.search", "Search", _PERSONA_STYLE_INPUTS)], clients)
+    tb.call_tool("wiki_search", {"body": {"query": "Évora", "lang": "pt"}})
+    assert clients.arguments == [{"body": {"query": "Évora", "lang": "pt"}}]
+    with pytest.raises(ValueError):
+        tb.call_tool("wiki_search", {"body": {"query": "Évora", "lang": "xx"}})
+    with pytest.raises(ValueError):
+        tb.call_tool("wiki_search", {"body": {"lang": "pt"}})
+    assert len(clients.arguments) == 1
+
+
+
+_ORDINARY = {"properties": {"query": {"type": "string"}}, "required": ["query"]}
+
+
+def _deep_object(depth):
+    schema = {"type": "string"}
+    for _ in range(depth):
+        schema = {"type": "object", "properties": {"inner": schema}}
+    return {"properties": {"root": schema}}
+
+
+@pytest.mark.parametrize("bad_inputs, reason", [
+    ({"properties": {"_id": {"type": "string"}}}, "_id"),
+    (_deep_object(2000), "RecursionError"),
+])
+def test_utcp_one_tool_whose_schema_cannot_be_built_is_skipped_alone(monkeypatch, bad_inputs, reason):
+    errors = _captured(monkeypatch, "error")
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("db.broken", "broken", bad_inputs),
+                                     _make_utcp_tool("db.ping", "ping", _ORDINARY)], clients)
+    assert list(tb.tools) == ["db_ping"]
+    assert len(errors) == 1 and "'db.broken'" in errors[0] and reason in errors[0]
+
+
+def test_utcp_nested_underscore_key_loads_and_is_forwarded(monkeypatch):
+    clients = _Clients()
+    inputs = {"properties": {"doc": {"type": "object",
+                                     "properties": {"_id": {"type": "string"}, "title": {"type": "string"}}}},
+              "required": ["doc"]}
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("db.update_doc", "update", inputs),
+                                     _make_utcp_tool("db.ping", "ping", _ORDINARY)], clients)
+    assert sorted(tb.tools) == ["db_ping", "db_update_doc"]
+    tb.call_tool("db_update_doc", {"doc": {"_id": "42", "title": "t"}})
+    assert clients.arguments == [{"doc": {"_id": "42", "title": "t"}}]
+
+
+def test_utcp_explicit_null_inside_a_nested_object_is_forwarded(monkeypatch):
+    clients = _Clients()
+    inputs = {"properties": {
+        "body": {"type": "object",
+                 "properties": {"task": {"type": "string"},
+                                "context": {"anyOf": [{"type": "string"}, {"type": "null"}]}},
+                 "required": ["task", "context"]},
+        "lang": {"type": "string"}},
+        "required": ["body"]}
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.run", "run", inputs)], clients)
+    tb.call_tool("a_run", {"body": {"task": "t", "context": None}, "lang": None})
+    assert clients.arguments == [{"body": {"task": "t", "context": None}}]
+
+
+
+_PATTERN_BODY = {"properties": {"body": {"type": "object",
+                                         "properties": {"path": {"type": "string"},
+                                                        "pattern": {"type": "string", "default": "*"}},
+                                         "required": ["path"]}},
+                 "required": ["body"]}
+
+
+def test_utcp_omitted_nested_optional_field_is_not_forwarded(monkeypatch):
+    # The server fills in its own default; sending the key as null makes it answer 422.
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("fs.list_directory", "list", _PATTERN_BODY)], clients)
+    tb.call_tool("fs_list_directory", {"body": {"path": "/tmp"}})
+    assert clients.arguments == [{"body": {"path": "/tmp"}}]
+
+
+def test_utcp_null_for_a_nested_field_that_does_not_allow_null_is_dropped(monkeypatch):
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("fs.list_directory", "list", _PATTERN_BODY)], clients)
+    tb.call_tool("fs_list_directory", {"body": {"path": "/tmp", "pattern": None}})
+    assert clients.arguments == [{"body": {"path": "/tmp"}}]
+
+
+def test_utcp_null_for_a_top_level_field_that_allows_null_is_forwarded(monkeypatch):
+    clients = _Clients()
+    inputs = {"properties": {"ctx": {"anyOf": [{"type": "string"}, {"type": "null"}]}}, "required": ["ctx"]}
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.needs_null", "needs null", inputs)], clients)
+    tb.call_tool("a_needs_null", {"ctx": None})
+    assert clients.arguments == [{"ctx": None}]
+
+
+def test_utcp_buildable_tool_wins_a_name_its_unbuildable_rival_sorted_ahead_of(monkeypatch):
+    errors = _captured(monkeypatch, "error")
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.b", "cannot be built", {"properties": {"_id": {"type": "string"}}}),
+                                     _make_utcp_tool("a_b", "fine", _ORDINARY)], clients)
+    assert list(tb.tools) == ["a_b"]
+    tb.call_tool("a_b", {"query": "x"})
+    assert clients.called == ["a_b"]
+    assert len(errors) == 1 and "'a.b'" in errors[0]
+
+
+def test_utcp_omitted_field_that_allows_null_is_not_sent_as_null(monkeypatch):
+    # Leaving a field out is not the same as sending null: the server may treat
+    # null as a value and the missing key as "use the default".
+    clients = _Clients()
+    inputs = {"properties": {"body": {"type": "object",
+                                      "properties": {"task": {"type": "string"},
+                                                     "context": {"anyOf": [{"type": "string"}, {"type": "null"}],
+                                                                 "default": "global"}},
+                                      "required": ["task"]},
+                             "note": {"anyOf": [{"type": "string"}, {"type": "null"}]}},
+              "required": ["body"]}
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.run", "run", inputs)], clients)
+    tb.call_tool("a_run", {"body": {"task": "t"}})
+    assert clients.arguments == [{"body": {"task": "t"}}]
+
+
+
+_MIXED_INPUTS = {"properties": {
+    "items": {"type": "array", "items": {"type": "object", "properties": {"n": {"type": "integer"}, "o": {"type": "string", "default": "z"}, "p": {"type": ["string", "null"]}}, "required": ["n"]}},
+    "body": {"type": "object", "properties": {"q": {"type": "string"}, "lang": {"type": "string", "enum": ["en", "pt"]}},
+             "required": ["q"]}},
+    "required": ["items", "body"]}
+_MIXED_CALL = {"items": [{"n": 1}, {"n": 2, "p": None}], "body": {"q": "x", "lang": "pt", "page": 2}}
+
+
+def test_utcp_arrays_of_objects_and_unlisted_nested_keys_reach_the_server_as_plain_json(monkeypatch):
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.mixed", "mixed", _MIXED_INPUTS)], clients)
+    tb.call_tool("a_mixed", _MIXED_CALL)
+    assert clients.arguments == [_MIXED_CALL]
+    assert json.loads(json.dumps(clients.arguments[0])) == _MIXED_CALL
+
+
+_NULL_DEFS = {"Nullable": {"type": ["string", "null"]}, "Plain": {"type": "string"}}
+
+
+@pytest.mark.parametrize("field_schema, null_is_sent", [
+    ({"type": "string", "nullable": True}, True),
+    ({"oneOf": [{"type": "string"}, {"type": "null"}]}, True),
+    ({"anyOf": [{"type": "string"}, {"type": "null"}]}, True),
+    ({"type": ["string", "null"]}, True),
+    ({"enum": ["a", None]}, True),
+    ({}, True),
+    ({"$ref": "#/$defs/Nullable"}, True),
+    ({"type": "string"}, False),
+    ({"enum": ["a", "b"]}, False),
+    ({"oneOf": [{"type": "string"}, {"type": "integer"}]}, False),
+    ({"$ref": "#/$defs/Plain"}, False),
+])
+def test_utcp_null_is_sent_exactly_where_the_field_schema_allows_null(monkeypatch, field_schema, null_is_sent):
+    clients = _Clients()
+    inputs = {"$defs": _NULL_DEFS, "properties": {"f": field_schema, "q": {"type": "string"}}, "required": ["q"]}
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.nulls", "nulls", inputs)], clients)
+    tb.call_tool("a_nulls", {"q": "x", "f": None})
+    assert clients.arguments == [{"q": "x", "f": None} if null_is_sent else {"q": "x"}]

@@ -32,19 +32,27 @@ Key methods in `_async_runner.py`:
 
 ## Schema bridge (`ovos_tool_adapters/_schema.py`)
 
-MCP and UTCP servers describe tool inputs as JSON Schema. OVOS `ToolBox` expects a Pydantic `ToolArguments` subclass. `_schema_to_pydantic` (`_schema.py:30`) builds a dynamic model at runtime using Pydantic's `create_model`:
+MCP and UTCP servers describe tool inputs as JSON Schema. OVOS `ToolBox` expects a Pydantic `ToolArguments` subclass. `_schema_to_pydantic` (`_schema.py:158`) builds that class at runtime with Pydantic's `create_model`:
 
 ```
-MCP Tool.inputSchema (JSON Schema)
+MCP Tool.inputSchema or UTCP Tool.inputs (JSON Schema)
   ↓ _schema_to_pydantic("fetch_args", schema)
-  ↓ maps "string"→str, "integer"→int, "boolean"→bool, etc.
+  ↓ "string"→str, "integer"→int, "boolean"→bool, "enum"→Literal
+  ↓ an object with properties → a nested model, an array → List[item type]
+  ↓ local $ref and anyOf/oneOf with null → the referenced type, Optional
   ↓ required fields → Field(...), optional → Field(None)
   → dynamic Pydantic class: fetch_args(ToolArguments)
 ```
 
-This means `tool_json_list` (`agent_tools.py:291`) calls `.model_json_schema()` on the generated class, so the LLM receives the **actual schema** from the server.
+The class validates every call the way the server does, nested objects included. A nested object keeps keys the schema does not list, unless the schema sets `additionalProperties: false`. Pydantic cannot make a field with some names, such as `_id` or `model_dump`. A nested object that has one is validated as a plain object, and the server still checks its fields.
 
-## `AdapterToolOutput` (`_schema.py:53`)
+If the schema of one tool cannot be built at all, for example a top-level `_id` or a nesting too deep to follow, the toolbox logs an ERROR that names the tool and the reason, skips that tool, and loads the others.
+
+A call sends the arguments the caller gave, at every level of nesting. An argument the caller left out is not sent, so the server applies its own default. A `null` is sent only where the field's schema allows `null`: a `null` type, `nullable`, a `null` enum value, a `null` branch of `anyOf` or `oneOf`, or no type at all. Where the schema does not allow it, the `null` is left out, the same as an argument the caller did not give.
+
+`.model_json_schema()` on the class returns the server's own JSON Schema, unchanged. `tool_json_list` (`agent_tools.py:311`) reads it, so the LLM sees each nested field, enum and description exactly as the server declared them.
+
+## `AdapterToolOutput` (`_schema.py:206`)
 
 Both adapters return this shared output type:
 

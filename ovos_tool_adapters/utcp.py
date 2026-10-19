@@ -23,7 +23,7 @@ from ovos_utils.log import LOG
 from pydantic import ValidationError
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
-from ovos_tool_adapters._schema import AdapterToolOutput, _llm_tool_name, _schema_to_pydantic
+from ovos_tool_adapters._schema import AdapterToolOutput, _call_arguments, _llm_tool_name, _schema_to_pydantic
 
 UTCP_DOCS_URL = "https://github.com/OpenVoiceOS/ovos-tool-adapters/blob/dev/docs/utcp.md"
 
@@ -214,7 +214,7 @@ class UTCPToolBox(ToolBox):
             ``AdapterToolOutput`` with text content and raw response.
         """
         result = self._runner.run(
-            self._call_tool_async(name, args.model_dump(exclude_none=True)),
+            self._call_tool_async(name, _call_arguments(args)),
             timeout=self._timeout,
         )
         # UTCP responses vary by transport; normalise to text + raw.
@@ -274,9 +274,14 @@ class UTCPToolBox(ToolBox):
                 LOG.error(f"UTCPToolBox: tools {exposed[name]!r} and {utcp_tool.name!r} both become "
                           f"{name!r}; {utcp_tool.name!r} skipped.")
                 continue
-            exposed[name] = utcp_tool.name
             schema = utcp_tool.inputs.model_dump(by_alias=True, exclude_none=True)
-            args_model = _schema_to_pydantic(f"{name}_args", schema)
+            try:
+                args_model = _schema_to_pydantic(f"{name}_args", schema)
+            except (Exception, RecursionError) as exc:
+                LOG.error(f"UTCPToolBox: tool {utcp_tool.name!r} skipped: its argument schema cannot be "
+                          f"built: {type(exc).__name__}: {exc}")
+                continue
+            exposed[name] = utcp_tool.name
             name_copy = utcp_tool.name
 
             def _make_call(tool_name: str) -> Any:

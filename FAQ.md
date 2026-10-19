@@ -7,7 +7,7 @@
 `discover_tools()` catches the `ImportError`, logs a `LOG.warning`, and returns `[]`. OPM loads the entry point without a crash, and the toolbox provides no tools. Source: `MCPToolBox.discover_tools`, `UTCPToolBox.discover_tools`
 
 **Q: How are MCP tool schemas exposed to the LLM?**
-`_schema_to_pydantic` converts `Tool.inputSchema` into a dynamic Pydantic `ToolArguments` subclass. `ToolBox.tool_json_list` calls `.model_json_schema()` on it, so the LLM receives the real schema. Source: `_schema.py:30`
+`_schema_to_pydantic` converts `Tool.inputSchema` into a dynamic Pydantic `ToolArguments` subclass. `ToolBox.tool_json_list` calls `.model_json_schema()` on it, which returns the server's schema unchanged, nested objects and enums included. Source: `_schema.py:158`
 
 **Q: Is the MCP session reconnected on every `call_tool`?**
 No. The session is established once in `discover_tools()` via `_connect_and_list()` and reused for all subsequent calls. Source: `mcp.py:99`
