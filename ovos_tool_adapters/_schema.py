@@ -11,10 +11,25 @@
 # limitations under the License.
 """JSON Schema → Pydantic bridge and shared output type for adapters."""
 
+import re
 from typing import Any, Dict, List, Optional, Type
 
 from ovos_plugin_manager.templates.agent_tools import ToolArguments, ToolOutput
 from pydantic import Field, create_model
+
+
+# OpenAI-style function calling accepts only these characters in a tool name,
+# and at most _MAX_TOOL_NAME_LENGTH of them. UTCP joins the manual name and the
+# tool name with a dot, and MCP allows dots too, so a remote name can reach the
+# model only after this substitution.
+_DISALLOWED_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
+_MAX_TOOL_NAME_LENGTH = 64
+
+
+def _llm_tool_name(name: str) -> str:
+    """Return *name* in the form a function-calling provider accepts: every other character becomes ``_``,
+    and the result is cut to 64 characters."""
+    return _DISALLOWED_NAME_CHARS.sub("_", name)[:_MAX_TOOL_NAME_LENGTH]
 
 
 # Mapping from JSON Schema primitive types to Python types.

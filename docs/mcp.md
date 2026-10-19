@@ -23,6 +23,10 @@ Bridges any MCP (Model Context Protocol) server into the OVOS agentic loop. On c
 | `url` | str | n/a | sse/http: full server URL including scheme and port |
 | `timeout` | int | `30` | Seconds to wait per tool call or connection attempt |
 
+## Tool names
+
+The MCP specification allows a dot in a tool name, for example `admin.tools.list`. OpenAI-style function calling rejects it. The toolbox replaces every character other than a letter, a digit, `_` or `-` with `_` before the tool reaches the model, so `admin.tools.list` becomes `admin_tools_list`, and calls the server with the original name. It cuts a name longer than 64 characters to 64, the OpenAI limit. If two tools become the same name, the toolbox keeps the one whose original name sorts first, logs an ERROR that names both, and skips the other. Because the order is sorted, the same tool wins on every discovery.
+
 ## Persona config examples
 
 ### stdio: run an MCP server as a subprocess
@@ -85,8 +89,8 @@ The toolbox then has the server's MCP tools, `translate` and `detect_language`. 
 
 Each MCP `Tool` object has a `name`, `description`, and `inputSchema` (JSON Schema). `MCPToolBox.discover_tools` (`mcp.py:160`) does the following:
 
-1. Calls `_schema_to_pydantic(tool.name + "_args", tool.inputSchema)` to build a dynamic Pydantic `ToolArguments` subclass with the correct field types and required/optional markers.
-2. Wraps `session.call_tool(name, args)` in `_call_mcp_tool` (`mcp.py:134`).
+1. Gives the tool its model-facing name (see [Tool names](#tool-names)) and calls `_schema_to_pydantic(name + "_args", tool.inputSchema)` to build a dynamic Pydantic `ToolArguments` subclass with the correct field types and required/optional markers.
+2. Wraps `session.call_tool(tool.name, args)`, with the original MCP name, in `_call_mcp_tool` (`mcp.py:134`).
 3. Returns `AdapterToolOutput(content=..., is_error=..., raw=...)` (`_schema.py:53`).
 
 The LLM receives the **real JSON Schema** from the MCP server via `tool_json_list`, not a generic passthrough.

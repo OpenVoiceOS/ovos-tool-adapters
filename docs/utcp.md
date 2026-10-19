@@ -21,7 +21,7 @@ Each entry in `manual_call_templates` is a UTCP call template that fetches a man
 
 | Key | Value |
 |---|---|
-| `name` | A name for the manual. The client puts it in front of each tool name, for example `ovos_translate.translate`. |
+| `name` | A name for the manual. The client puts it in front of each tool name with a dot, for example `ovos_translate.translate`. The toolbox shows that tool to the model as `ovos_translate_translate` (see [Tool names](#tool-names)). |
 | `call_template_type` | `"http"` for a manual served over HTTP |
 | `url` | The full URL of the manual, for example `http://localhost:9686/utcp` |
 | `http_method` | `"GET"` |
@@ -56,14 +56,18 @@ The OVOS TTS, STT and translate servers serve a UTCP manual at `GET /utcp`. This
 The toolbox then has these tools:
 
 ```
-ovos_translate.classify_language
-ovos_translate.detect_language
-ovos_translate.supported_languages
-ovos_translate.translate
-ovos_translate.translate_with_source
+ovos_translate_classify_language
+ovos_translate_detect_language
+ovos_translate_supported_languages
+ovos_translate_translate
+ovos_translate_translate_with_source
 ```
 
-A call to `ovos_translate.translate_with_source` with `{"src_lang": "en", "tgt_lang": "pt", "utterance": "good morning"}` returns the translated text in `content`.
+A call to `ovos_translate_translate_with_source` with `{"src_lang": "en", "tgt_lang": "pt", "utterance": "good morning"}` returns the translated text in `content`.
+
+### Tool names
+
+OpenAI-style function calling accepts only letters, digits, `_` and `-` in a tool name, and rejects a request that names a tool with a dot (`Function at index 0 has an invalid name`). The UTCP client names each tool `<manual>.<tool>`, so the toolbox replaces every other character with `_` before the tool reaches the model, and calls the server with the original UTCP name. It cuts a name longer than 64 characters to 64, the OpenAI limit. If two tools become the same name, the toolbox keeps the one whose original name sorts first, logs an ERROR that names both, and skips the other. Because the order is sorted, the same tool wins on every discovery.
 
 ### Several servers
 
@@ -119,8 +123,8 @@ A `${VAR}` variable that is not set is different: the UTCP client stops the whol
 2. Creates a new client with `UtcpClient.create(config=...)` without the templates, and registers the valid ones with `client.register_manuals(...)`. A manual that cannot be fetched does not stop the others.
 3. Replaces the previous client with the new one, then closes the previous one. Tool calls made during a rediscovery use the previous client until the new one has its manuals.
 4. Reads all tools from the client's tool repository.
-5. Converts each tool's `inputs` JSON Schema into a Pydantic `ToolArguments` model with `_schema_to_pydantic`, so the LLM sees the real argument schema.
-6. Wraps `client.call_tool(name, args)` in `_call_utcp_tool`.
+5. Gives each tool its model-facing name (see [Tool names](#tool-names)) and converts its `inputs` JSON Schema into a Pydantic `ToolArguments` model with `_schema_to_pydantic`, so the LLM sees the real argument schema.
+6. Wraps `client.call_tool(name, args)`, with the original UTCP name, in `_call_utcp_tool`.
 
 ## Tool output
 
@@ -152,7 +156,7 @@ UTCPToolBox.__init__()
           → client.config.tool_repository.get_tools()
       → AgentTools registered
 
-call_tool("ovos_translate.translate", {"tgt_lang": "pt", "utterance": "..."})
+call_tool("ovos_translate_translate", {"tgt_lang": "pt", "utterance": "..."})
   → _call_utcp_tool(name, args)
       → _runner.run(client.call_tool(...))
       → AdapterToolOutput returned

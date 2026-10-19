@@ -23,7 +23,7 @@ from ovos_utils.log import LOG
 from pydantic import ValidationError
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
-from ovos_tool_adapters._schema import AdapterToolOutput, _schema_to_pydantic
+from ovos_tool_adapters._schema import AdapterToolOutput, _llm_tool_name, _schema_to_pydantic
 
 UTCP_DOCS_URL = "https://github.com/OpenVoiceOS/ovos-tool-adapters/blob/dev/docs/utcp.md"
 
@@ -266,9 +266,17 @@ class UTCPToolBox(ToolBox):
             return []
 
         agent_tools: List[AgentTool] = []
-        for utcp_tool in utcp_tools:
+        exposed: Dict[str, str] = {}
+        # Sorted, so the same tool wins a name collision on every discovery.
+        for utcp_tool in sorted(utcp_tools, key=lambda tool: tool.name):
+            name = _llm_tool_name(utcp_tool.name)
+            if name in exposed:
+                LOG.error(f"UTCPToolBox: tools {exposed[name]!r} and {utcp_tool.name!r} both become "
+                          f"{name!r}; {utcp_tool.name!r} skipped.")
+                continue
+            exposed[name] = utcp_tool.name
             schema = utcp_tool.inputs.model_dump(by_alias=True, exclude_none=True)
-            args_model = _schema_to_pydantic(f"{utcp_tool.name}_args", schema)
+            args_model = _schema_to_pydantic(f"{name}_args", schema)
             name_copy = utcp_tool.name
 
             def _make_call(tool_name: str) -> Any:
@@ -277,7 +285,7 @@ class UTCPToolBox(ToolBox):
                 return _call
 
             agent_tools.append(AgentTool(
-                name=utcp_tool.name,
+                name=name,
                 description=getattr(utcp_tool, "description", "") or "",
                 argument_schema=args_model,
                 output_schema=AdapterToolOutput,

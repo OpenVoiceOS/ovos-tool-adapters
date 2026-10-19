@@ -22,7 +22,7 @@ from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
-from ovos_tool_adapters._schema import AdapterToolOutput, _schema_to_pydantic
+from ovos_tool_adapters._schema import AdapterToolOutput, _llm_tool_name, _schema_to_pydantic
 
 
 class MCPToolBox(ToolBox):
@@ -243,13 +243,21 @@ class MCPToolBox(ToolBox):
             return []
 
         agent_tools: List[AgentTool] = []
-        for mcp_tool in mcp_tools:
+        exposed: Dict[str, str] = {}
+        # Sorted, so the same tool wins a name collision on every discovery.
+        for mcp_tool in sorted(mcp_tools, key=lambda tool: tool.name):
+            name = _llm_tool_name(mcp_tool.name)
+            if name in exposed:
+                LOG.error(f"MCPToolBox: tools {exposed[name]!r} and {mcp_tool.name!r} both become "
+                          f"{name!r}; {mcp_tool.name!r} skipped.")
+                continue
+            exposed[name] = mcp_tool.name
             # mcp>=2.0 renamed ``Tool.inputSchema`` to ``Tool.input_schema``.
             input_schema = getattr(mcp_tool, "input_schema", None)
             if input_schema is None:
                 input_schema = getattr(mcp_tool, "inputSchema", None)
             args_model = _schema_to_pydantic(
-                f"{mcp_tool.name}_args",
+                f"{name}_args",
                 input_schema or {},
             )
             name_copy = mcp_tool.name  # capture for closure
@@ -260,7 +268,7 @@ class MCPToolBox(ToolBox):
                 return _call
 
             agent_tools.append(AgentTool(
-                name=mcp_tool.name,
+                name=name,
                 description=mcp_tool.description or "",
                 argument_schema=args_model,
                 output_schema=AdapterToolOutput,

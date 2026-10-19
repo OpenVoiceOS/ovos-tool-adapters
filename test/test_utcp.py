@@ -1,5 +1,6 @@
 """Tests for UTCPToolBox — all UTCP I/O is mocked."""
 import asyncio
+import re
 import gc
 import sys
 import warnings
@@ -8,6 +9,7 @@ from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ovos_plugin_manager.templates.agent_tools import ToolBox
 
 from ovos_tool_adapters.utcp import UTCP_DOCS_URL, UTCPToolBox, _config_error, _utcp_http_installed
 from ovos_tool_adapters._schema import AdapterToolOutput
@@ -32,6 +34,7 @@ class _Clients:
     def __init__(self):
         self.created = 0
         self.closed = 0
+        self.called = []
 
 
 def _fake_utcp_modules(tools_list, clients=None, create_error=None, registered_types=("http",),
@@ -52,6 +55,7 @@ def _fake_utcp_modules(tools_list, clients=None, create_error=None, registered_t
             return []
 
         async def call_tool(self, name, args):
+            clients.called.append(name)
             return {"text": f"result for {args.get('query', '')}", "is_error": False}
 
         async def close(self):
@@ -312,3 +316,74 @@ def test_utcp_registration_error_survives_a_failing_close(monkeypatch):
     assert tb.tools == {}
     assert (clients.created, clients.closed) == (1, 1)
     assert warnings_logged == [f"UTCPToolBox: failed to connect to UTCP server: {registration_error}"]
+
+
+_PROVIDER_NAME = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _toolbox_with(monkeypatch, tools, clients):
+    monkeypatch.setattr("ovos_tool_adapters.utcp._AsyncRunner", _FakeRunner)
+    with patch.dict("sys.modules", _fake_utcp_modules(tools, clients=clients)):
+        return UTCPToolBox(config={"utcp_config": {}})
+
+
+def test_utcp_dotted_name_is_exposed_in_the_provider_charset(monkeypatch):
+    # UTCP prefixes every tool with its manual name and a dot; OpenAI-style
+    # providers reject the dot, so the tool must reach the model without it.
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool(
+        "ovos_text.reverse_text", "Reverse text",
+        {"properties": {"query": {"type": "string"}}, "required": ["query"]})], clients)
+    assert list(tb.tools) == ["ovos_text_reverse_text"]
+    sent = ToolBox.normalize_tools([tb])
+    assert [t["function"]["name"] for t in sent] == ["ovos_text_reverse_text"]
+    assert all(_PROVIDER_NAME.match(t["function"]["name"]) for t in sent)
+
+
+def test_utcp_exposed_name_calls_the_original_utcp_name(monkeypatch):
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool(
+        "ovos_text.reverse_text", "Reverse text",
+        {"properties": {"query": {"type": "string"}}, "required": ["query"]})], clients)
+    result = tb.call_tool("ovos_text_reverse_text", {"query": "abc"})
+    assert clients.called == ["ovos_text.reverse_text"]
+    assert result.content == "result for abc"
+
+
+def test_utcp_names_that_collide_after_sanitising_are_an_error(monkeypatch):
+    errors = _captured(monkeypatch, "error")
+    clients = _Clients()
+    schema = {"properties": {"query": {"type": "string"}}, "required": ["query"]}
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool("a.b", "first", schema),
+                                     _make_utcp_tool("a_b", "second", schema)], clients)
+    assert list(tb.tools) == ["a_b"]
+    tb.call_tool("a_b", {"query": "x"})
+    assert clients.called == ["a.b"]
+    assert len(errors) == 1
+    assert "'a_b'" in errors[0] and "'a.b'" in errors[0]
+
+
+
+def test_utcp_collision_winner_does_not_depend_on_repository_order(monkeypatch):
+    # The UTCP client's tool repository does not promise an order, so a
+    # collision must resolve the same way whatever order discovery sees.
+    schema = {"properties": {"query": {"type": "string"}}, "required": ["query"]}
+    for order in (["a_b", "a.b"], ["a.b", "a_b"]):
+        clients = _Clients()
+        tb = _toolbox_with(monkeypatch, [_make_utcp_tool(n, n, schema) for n in order], clients)
+        tb.call_tool("a_b", {"query": "x"})
+        assert clients.called == ["a.b"], order
+
+
+def test_utcp_long_names_are_cut_to_64_characters_and_clashes_are_collisions(monkeypatch):
+    errors = _captured(monkeypatch, "error")
+    schema = {"properties": {"query": {"type": "string"}}, "required": ["query"]}
+    stem = "m." + "x" * 70
+    clients = _Clients()
+    tb = _toolbox_with(monkeypatch, [_make_utcp_tool(stem + "_one", "one", schema),
+                                     _make_utcp_tool(stem + "_two", "two", schema)], clients)
+    exposed = ("m_" + "x" * 70)[:64]
+    assert list(tb.tools) == [exposed]
+    tb.call_tool(exposed, {"query": "x"})
+    assert clients.called == [stem + "_one"]
+    assert len(errors) == 1 and repr(stem + "_two") in errors[0]
