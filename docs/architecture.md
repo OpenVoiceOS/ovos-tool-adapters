@@ -85,7 +85,7 @@ close()                                 # line 200
 
 ## UTCPToolBox lifecycle (`utcp.py`)
 
-Mirrors MCPToolBox. The main difference is that `UtcpClient.create()` accepts a `UtcpClientConfig` and manages provider registration internally. Tools come from `client.get_tools()` (`utcp.py:73`).
+Mirrors MCPToolBox. The main difference is the manual registration. The toolbox validates each template in `manual_call_templates` and skips one that the UTCP client rejects. It creates a `UtcpClient` without the templates, then registers the valid ones with `client.register_manuals()`, so it can log each failed manual with its reason. Tools come from the client's tool repository (`client.config.tool_repository.get_tools()`), and each tool's JSON Schema comes from `Tool.inputs`. `close()` closes the UTCP client before it stops the runner, except at interpreter shutdown, where the runner loop can no longer run the close. A new discovery registers the manuals on a new client first. Only then does it replace the previous client and close it, so tool calls made during the discovery keep working.
 
 ## OPM integration
 

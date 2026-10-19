@@ -48,26 +48,34 @@ The agent now has access to every tool the MCP server exposes, with the real JSO
 
 ### UTCP (`ovos-utcp-toolbox`)
 
-Any transport supported by the installed UTCP version (HTTP, SSE, CLI, WebSocket, MCP, …):
+The `utcp` extra installs the UTCP 1.x client and its HTTP plugin (`utcp-http`). Each entry in `manual_call_templates` points at a UTCP manual. This example loads the manual of a local [ovos-translate-server](https://github.com/OpenVoiceOS/ovos-translate-server):
 
 ```json
 {
   "toolboxes": ["ovos-utcp-toolbox"],
   "ovos-utcp-toolbox": {
     "utcp_config": {
-      "tool_providers": [
-        {"name": "search", "provider_type": "http", "url": "http://localhost:8000/tools"}
+      "manual_call_templates": [
+        {
+          "name": "ovos_translate",
+          "call_template_type": "http",
+          "url": "http://localhost:9686/utcp",
+          "http_method": "GET"
+        }
       ]
     }
   }
 }
 ```
 
+The agent then gets tools such as `ovos_translate.translate_with_source`. Other call template types (CLI, SSE, WebSocket, MCP) need their own UTCP plugin package, for example `utcp-cli`.
+
 ## How it works
 
 - A daemon-thread asyncio event loop keeps MCP/UTCP sessions alive between calls, so there is no reconnect per tool call.
 - Each server's JSON Schema is translated to a Pydantic model at discovery time, so the LLM sees the **actual** input schema.
 - Missing `mcp`/`utcp` packages degrade gracefully: the toolbox returns an empty tool list and logs a warning, and the agent loop is not affected.
+- A config with a `tool_providers` or `providers` key loads no tools. These keys are not UTCP 1.x keys. The toolbox logs an error that names `manual_call_templates` and links [docs/utcp.md](docs/utcp.md).
 
 Full documentation: [docs/](docs/index.md)
 

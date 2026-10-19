@@ -35,14 +35,13 @@ Repository   = "https://github.com/OpenVoiceOS/ovos-tool-adapters"
 "Bug Tracker" = "https://github.com/OpenVoiceOS/ovos-tool-adapters/issues"
 
 [project.optional-dependencies]
-mcp  = ["mcp>=1.0"]
-utcp = ["utcp>=1.1"]
-dev  = ["pytest>=7.0", "pytest-cov", "pytest-asyncio"]
-# CI installs the `test` extra. Without the adapters' own SDKs here the
-# live round-trip tests (test/test_mcp_live.py, the utcp equivalents)
-# importorskip themselves away, so the very thing this package exists to
-# do is never exercised in CI -- it only looked green.
-test = ["pytest>=7.0", "pytest-cov", "pytest-asyncio", "mcp>=1.0", "utcp>=1.1"]
+mcp  = ["mcp>=2.3.0"]
+utcp = ["utcp>=1.2.0", "utcp-http>=1.1.14"]
+dev  = ["pytest>=7.0", "pytest-cov", "pytest-asyncio", "mcp>=2.3.0", "utcp>=1.2.0", "utcp-http>=1.1.14"]
+# The build workflow installs `test` and the coverage workflow installs `dev`.
+# Both carry the adapters' own SDKs, so the live round-trip tests run in
+# every CI job instead of skipping.
+test = ["pytest>=7.0", "pytest-cov", "pytest-asyncio", "mcp>=2.3.0", "utcp>=1.2.0", "utcp-http>=1.1.14"]
 
 [project.entry-points."opm.agents.toolbox"]
 ovos-mcp-toolbox  = "ovos_tool_adapters.mcp:MCPToolBox"

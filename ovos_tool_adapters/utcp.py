@@ -11,15 +11,87 @@
 # limitations under the License.
 """UTCPToolBox — exposes a UTCP server as an OVOS ToolBox plugin."""
 
+import importlib.util
+import inspect
+import sys
 from typing import Any, Dict, List, Optional, Union
 
 from ovos_bus_client import MessageBusClient
 from ovos_plugin_manager.templates.agent_tools import AgentTool, ToolArguments, ToolBox
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
+from pydantic import ValidationError
 
 from ovos_tool_adapters._async_runner import _AsyncRunner
 from ovos_tool_adapters._schema import AdapterToolOutput, _schema_to_pydantic
+
+UTCP_DOCS_URL = "https://github.com/OpenVoiceOS/ovos-tool-adapters/blob/dev/docs/utcp.md"
+
+
+def _config_error(utcp_config: Any) -> Optional[str]:
+    """
+    Check the ``utcp_config`` shape before it reaches the UTCP client.
+
+    Args:
+        utcp_config: The ``utcp_config`` value from the plugin configuration.
+
+    Returns:
+        An error message naming the problem, or ``None`` if the shape is valid.
+    """
+    if not isinstance(utcp_config, dict):
+        return f"'utcp_config' must be an object, not {type(utcp_config).__name__}"
+    for key in ("tool_providers", "providers"):
+        if key in utcp_config:
+            return (f"'utcp_config.{key}' is not a UTCP 1.x key; "
+                    f"list each manual in 'manual_call_templates' instead, see {UTCP_DOCS_URL}")
+    templates = utcp_config.get("manual_call_templates", [])
+    if not isinstance(templates, list):
+        return f"'utcp_config.manual_call_templates' must be a list, not {type(templates).__name__}"
+    for index, template in enumerate(templates):
+        if not isinstance(template, dict):
+            return f"manual_call_templates[{index}] must be an object, not {type(template).__name__}"
+        label = _template_label(index, template)
+        required = ["call_template_type"]
+        if template.get("call_template_type") == "http":
+            required.append("url")
+        for key in required:
+            if key not in template:
+                return f"{label} is missing the required key {key!r}, see {UTCP_DOCS_URL}"
+    return None
+
+
+def _template_label(index: int, template: Dict[str, Any]) -> str:
+    """Name a manual call template for log messages."""
+    return f"manual_call_templates[{index}] ({template.get('name', 'unnamed')!r})"
+
+
+def _template_rejection(exc: BaseException) -> str:
+    """
+    Reduce a UTCP template validation error to one line.
+
+    utcp wraps the real error in messages that hold only a traceback. The
+    first pydantic error names the field; otherwise the outermost exception
+    with its own message names the cause.
+    """
+    chain = []
+    cause: Optional[BaseException] = exc
+    while cause is not None:
+        chain.append(cause)
+        cause = cause.__cause__ or cause.__context__
+    for cause in chain:
+        if isinstance(cause, ValidationError):
+            error = cause.errors()[0]
+            return f"{'.'.join(map(str, error['loc']))}: {error['msg']}"
+    for cause in chain:
+        first_line = (str(cause).strip().splitlines() or [""])[0]
+        if first_line and not first_line.endswith("Traceback (most recent call last):"):
+            return first_line if cause is exc else f"{type(cause).__name__}: {first_line}"
+    return f"{type(chain[-1]).__name__}: {chain[-1]}"
+
+
+def _utcp_http_installed() -> bool:
+    """Return ``True`` if the ``utcp-http`` plugin, which handles ``http`` call templates, is importable."""
+    return importlib.util.find_spec("utcp_http") is not None
 
 
 class UTCPToolBox(ToolBox):
@@ -31,7 +103,8 @@ class UTCPToolBox(ToolBox):
 
     Config keys:
 
-    - ``utcp_config`` *(required)*: dict passed to ``UtcpClientConfig(**utcp_config)``
+    - ``utcp_config`` *(required)*: dict passed to ``UtcpClientConfig(**utcp_config)``,
+      with one ``manual_call_templates`` entry per UTCP manual
     - ``timeout`` *(optional)*: seconds per call, default ``30``
 
     Entry point group: ``opm.agents.toolbox``
@@ -72,14 +145,45 @@ class UTCPToolBox(ToolBox):
         Returns:
             List of UTCP ``Tool`` objects.
         """
-        from utcp.client import UtcpClient
-        from utcp.client.utcp_client_config import UtcpClientConfig
+        from utcp.data.call_template import CallTemplateSerializer
+        from utcp.data.utcp_client_config import UtcpClientConfig
+        from utcp.utcp_client import UtcpClient
 
-        utcp_config_dict: Dict[str, Any] = self.config.get("utcp_config", {})
-        utcp_cfg = UtcpClientConfig(**utcp_config_dict)
-        self._client = await UtcpClient.create(config=utcp_cfg)
-        tools = await self._client.get_tools()
-        return tools
+        utcp_config = dict(self.config.get("utcp_config", {}))
+        templates = []
+        for index, template in enumerate(utcp_config.pop("manual_call_templates", [])):
+            try:
+                templates.append(CallTemplateSerializer().validate_dict(template))
+            except Exception as exc:
+                hint = ""
+                if template.get("call_template_type") == "http" and not _utcp_http_installed():
+                    hint = " The utcp-http plugin is not installed: pip install 'ovos-tool-adapters[utcp]'."
+                LOG.error(f"UTCPToolBox: {_template_label(index, template)} skipped: "
+                          f"{_template_rejection(exc)}.{hint}")
+
+        # Register on a new client before swapping it in, so tool calls made
+        # during a refresh keep using the previous client and its manuals.
+        client = await UtcpClient.create(config=UtcpClientConfig(**utcp_config))
+        try:
+            results = await client.register_manuals(templates)
+        except BaseException:
+            try:
+                await client.close()
+            except Exception as exc:
+                LOG.debug(f"UTCPToolBox: error closing the UTCP client after a failed registration: {exc}")
+            raise
+        for result in results:
+            if not result.success:
+                reasons = "; ".join(error.strip().splitlines()[-1] for error in result.errors if error.strip())
+                LOG.error(f"UTCPToolBox: manual {result.manual_call_template.name!r} "
+                          f"loaded no tools: {reasons or 'no reason given'}")
+        previous, self._client = self._client, client
+        if previous is not None:
+            try:
+                await previous.close()
+            except Exception as exc:
+                LOG.debug(f"UTCPToolBox: error closing the previous UTCP client: {exc}")
+        return await client.config.tool_repository.get_tools()
 
     async def _call_tool_async(self, name: str, arguments: Dict[str, Any]) -> Any:
         """
@@ -150,6 +254,11 @@ class UTCPToolBox(ToolBox):
             )
             return []
 
+        error = _config_error(self.config.get("utcp_config", {}))
+        if error:
+            LOG.error(f"UTCPToolBox: {error} — no tools loaded.")
+            return []
+
         try:
             utcp_tools = self._runner.run(self._connect_and_list(), timeout=self._timeout)
         except Exception as exc:
@@ -158,7 +267,7 @@ class UTCPToolBox(ToolBox):
 
         agent_tools: List[AgentTool] = []
         for utcp_tool in utcp_tools:
-            schema = getattr(utcp_tool, "input_schema", None) or {}
+            schema = utcp_tool.inputs.model_dump(by_alias=True, exclude_none=True)
             args_model = _schema_to_pydantic(f"{utcp_tool.name}_args", schema)
             name_copy = utcp_tool.name
 
@@ -177,7 +286,20 @@ class UTCPToolBox(ToolBox):
         return agent_tools
 
     def close(self) -> None:
-        """Stop the async runner."""
+        """Close the UTCP client and stop the async runner."""
+        # At interpreter shutdown the runner loop can no longer run the close
+        # coroutine, so waiting for it would block exit for the full timeout.
+        if self._client is not None and not sys.is_finalizing():
+            closing = self._client.close()
+            try:
+                self._runner.run(closing, timeout=self._timeout)
+            except Exception as exc:
+                # a coroutine the runner never started must be closed here,
+                # or asyncio warns that it was never awaited
+                if inspect.getcoroutinestate(closing) == inspect.CORO_CREATED:
+                    closing.close()
+                LOG.debug(f"UTCPToolBox: error closing UTCP client: {exc}")
+            self._client = None
         self._runner.close()
 
     def __del__(self) -> None:
