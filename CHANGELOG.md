@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.10a2](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.10a2) (2026-10-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.10a1...0.1.10a2)
+
+**Merged pull requests:**
+
+- docs: describe the latest alpha only [\#17](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/17) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.1.10a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.10a1) (2026-10-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.9a1...0.1.10a1)
