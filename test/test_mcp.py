@@ -1,5 +1,6 @@
 """Tests for MCPToolBox — all MCP I/O is mocked."""
 import asyncio
+import json
 import re
 from types import SimpleNamespace
 from typing import Any, Dict, List
@@ -43,6 +44,12 @@ def mcp_calls():
 
 
 @pytest.fixture()
+def mcp_arguments():
+    """The arguments the fake MCP session received, one dict per call."""
+    return []
+
+
+@pytest.fixture()
 def mcp_errors(monkeypatch):
     """The messages MCPToolBox logs at ERROR level; request it before mcp_toolbox."""
     messages = []
@@ -51,7 +58,7 @@ def mcp_errors(monkeypatch):
 
 
 @pytest.fixture()
-def mcp_toolbox(fake_mcp_tools, mcp_calls, monkeypatch):
+def mcp_toolbox(fake_mcp_tools, mcp_calls, mcp_arguments, monkeypatch):
     """Patch _AsyncRunner and MCP internals; return a configured MCPToolBox."""
 
     class _FakeSession:
@@ -63,6 +70,8 @@ def mcp_toolbox(fake_mcp_tools, mcp_calls, monkeypatch):
 
         async def call_tool(self, name, args):
             mcp_calls.append(name)
+            # The real session serialises the arguments as JSON-RPC params.
+            mcp_arguments.append(json.loads(json.dumps(args)))
             return _make_call_result([_make_content_block(f"fetched:{args.get('url', '')}")])
 
         async def __aenter__(self):
@@ -168,3 +177,66 @@ def test_mcp_names_that_collide_after_sanitising_are_an_error(mcp_errors, mcp_to
 def test_mcp_collision_winner_does_not_depend_on_server_order(mcp_toolbox, mcp_calls):
     mcp_toolbox.call_tool("a_b", {"url": "x"})
     assert mcp_calls == ["a.b"]
+
+
+_NESTED_MCP_SCHEMA = {
+    "type": "object",
+    "properties": {"stops": {
+        "type": "array",
+        "description": "Places to visit, in order.",
+        "items": {"type": "object",
+                  "properties": {"city": {"type": "string"}, "nights": {"type": "integer"}},
+                  "required": ["city"]},
+    }},
+    "required": ["stops"],
+}
+
+
+@pytest.mark.parametrize("fake_mcp_tools", [[_make_mcp_tool("plan", "Plan a trip", _NESTED_MCP_SCHEMA)]])
+def test_mcp_array_of_objects_reaches_the_model_and_is_validated(mcp_toolbox):
+    assert ToolBox.normalize_tools([mcp_toolbox])[0]["function"]["parameters"] == _NESTED_MCP_SCHEMA
+    mcp_toolbox.call_tool("plan", {"stops": [{"city": "Évora", "nights": 2}]})
+    with pytest.raises(ValueError):
+        mcp_toolbox.call_tool("plan", {"stops": [{"nights": 2}]})
+
+
+
+@pytest.mark.parametrize("fake_mcp_tools", [[_make_mcp_tool("broken", "x", {"properties": {"_id": {"type": "string"}}}),
+                                             _make_mcp_tool("fetch", "Fetch a URL", _URL_SCHEMA)]])
+def test_mcp_one_tool_whose_schema_cannot_be_built_is_skipped_alone(mcp_errors, mcp_toolbox):
+    assert list(mcp_toolbox.tools) == ["fetch"]
+    assert len(mcp_errors) == 1 and "'broken'" in mcp_errors[0] and "_id" in mcp_errors[0]
+
+
+
+_NEEDS_NULL = {"properties": {"ctx": {"anyOf": [{"type": "string"}, {"type": "null"}]}}, "required": ["ctx"]}
+
+
+@pytest.mark.parametrize("fake_mcp_tools", [[_make_mcp_tool("needs_null", "x", _NEEDS_NULL)]])
+def test_mcp_null_for_a_field_that_allows_null_is_forwarded(mcp_toolbox, mcp_arguments):
+    mcp_toolbox.call_tool("needs_null", {"ctx": None})
+    assert mcp_arguments == [{"ctx": None}]
+
+
+
+_MIXED_SCHEMA = {"properties": {
+    "items": {"type": "array", "items": {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]}},
+    "body": {"type": "object", "properties": {"q": {"type": "string"}, "lang": {"type": "string", "enum": ["en", "pt"]}},
+             "required": ["q"]}},
+    "required": ["items", "body"]}
+_MIXED_CALL = {"items": [{"n": 1}], "body": {"q": "x", "lang": "pt", "page": 2}}
+
+
+@pytest.mark.parametrize("fake_mcp_tools", [[_make_mcp_tool("mixed", "mixed", _MIXED_SCHEMA)]])
+def test_mcp_arrays_of_objects_and_unlisted_nested_keys_reach_the_server_as_plain_json(mcp_toolbox, mcp_arguments):
+    mcp_toolbox.call_tool("mixed", _MIXED_CALL)
+    assert mcp_arguments == [_MIXED_CALL]
+
+
+@pytest.mark.parametrize("fake_mcp_tools", [[_make_mcp_tool("a.b", "cannot be built", {"properties": {"_id": {"type": "string"}}}),
+                                             _make_mcp_tool("a_b", "fine", _URL_SCHEMA)]])
+def test_mcp_buildable_tool_wins_a_name_its_unbuildable_rival_sorted_ahead_of(mcp_errors, mcp_toolbox, mcp_calls):
+    assert list(mcp_toolbox.tools) == ["a_b"]
+    mcp_toolbox.call_tool("a_b", {"url": "x"})
+    assert mcp_calls == ["a_b"]
+    assert len(mcp_errors) == 1 and "'a.b'" in mcp_errors[0]
