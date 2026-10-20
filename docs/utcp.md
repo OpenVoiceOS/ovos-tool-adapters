@@ -7,7 +7,7 @@
 The toolbox uses the UTCP 1.x client. The `utcp` extra installs `utcp` and `utcp-http`:
 
 ```bash
-pip install "ovos-tool-adapters[utcp]"
+pip install --pre "ovos-tool-adapters[utcp]"
 ```
 
 ## Config reference

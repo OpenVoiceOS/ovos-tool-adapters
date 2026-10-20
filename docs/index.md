@@ -23,7 +23,7 @@ Bridges **MCP** (Model Context Protocol) and **UTCP** (Universal Tool Calling Pr
 ## Quick start
 
 ```bash
-pip install ovos-tool-adapters[mcp]
+pip install --pre ovos-tool-adapters[mcp]
 ```
 
 Persona JSON:

@@ -10,13 +10,13 @@
 
 ```bash
 # MCP support only
-pip install ovos-tool-adapters[mcp]
+pip install --pre ovos-tool-adapters[mcp]
 
 # UTCP support only
-pip install ovos-tool-adapters[utcp]
+pip install --pre ovos-tool-adapters[utcp]
 
 # Both
-pip install ovos-tool-adapters[mcp,utcp]
+pip install --pre ovos-tool-adapters[mcp,utcp]
 ```
 
 The `mcp` extra installs the `mcp` client SDK. The `utcp` extra installs `utcp` and `utcp-http`. Without `utcp-http`, the UTCP client refuses every manual with `call_template_type: "http"`.

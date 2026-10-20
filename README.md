@@ -11,9 +11,9 @@ Configure an MCP or UTCP server in your persona JSON. The agent loop then consum
 ## Install
 
 ```bash
-pip install ovos-tool-adapters[mcp]    # MCP support
-pip install ovos-tool-adapters[utcp]   # UTCP support
-pip install ovos-tool-adapters[mcp,utcp]
+pip install --pre ovos-tool-adapters[mcp]    # MCP support
+pip install --pre ovos-tool-adapters[utcp]   # UTCP support
+pip install --pre ovos-tool-adapters[mcp,utcp]
 ```
 
 ## Quick start
@@ -34,7 +34,7 @@ Add to your persona JSON:
 }
 ```
 
-The agent now has access to every tool the MCP server exposes, with the real JSON Schema forwarded to the LLM.
+The agent then has access to every tool the MCP server exposes, with the real JSON Schema forwarded to the LLM.
 
 ## Supported transports
 
