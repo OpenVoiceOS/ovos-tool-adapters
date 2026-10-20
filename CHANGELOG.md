@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.9a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.9a1) (2026-10-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.8a1...0.1.9a1)
+
+**Merged pull requests:**
+
+- fix: forward nested tool argument schemas to the model [\#15](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/15) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.1.8a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.8a1) (2026-10-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.7a1...0.1.8a1)
