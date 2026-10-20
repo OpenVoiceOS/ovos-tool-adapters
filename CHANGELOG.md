@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.10a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.10a1) (2026-10-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.9a1...0.1.10a1)
+
+**Merged pull requests:**
+
+- fix\(deps\): accept ovos-plugin-manager 3 [\#16](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/16) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.1.9a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.9a1) (2026-10-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.8a1...0.1.9a1)
@@ -66,15 +74,11 @@
 
 ## [0.1.3a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.3a1) (2026-08-01)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2a1...0.1.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.3a1)
 
 **Merged pull requests:**
 
 - docs: rewrite README in Simplified Technical English [\#7](https://github.com/OpenVoiceOS/ovos-tool-adapters/pull/7) ([JarbasAl](https://github.com/JarbasAl))
-
-## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-tool-adapters/tree/0.1.2a1) (2026-07-24)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-tool-adapters/compare/0.1.2...0.1.2a1)
 
 
 
